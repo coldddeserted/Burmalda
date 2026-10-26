@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Burmalda — Sign in</title>
+  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="auth">
+  <section class="auth-hero">
+    <div class="logo"></div>
+    <div>
+      <h2>Track reports and tasks easily with AI insights</h2>
+      <p>A company assistant: projects, payroll and PayPal payouts, compliance and analytics — all in one place.</p>
+      <div class="feat">
+        <div><i></i>Employee dashboard: projects, tasks, time tracking</div>
+        <div><i></i>Accountant dashboard: payouts, budget, risks, taxes</div>
+        <div><i></i>AI assistant for projects and finance</div>
+      </div>
+    </div>
+    <small style="opacity:.55">© 2026 Burmalda</small>
+  </section>
+
+  <section class="auth-side">
+    <button class="icon-btn auth-theme" id="themeBtn" aria-label="Toggle theme"></button>
+    <div class="auth-box">
+      <h1 id="title">Welcome back</h1>
+      <p class="sub" id="subtitle">Войдите в свой аккаунт</p>
+
+      <div class="tabs" role="tablist">
+        <button class="on" data-tab="login" role="tab">Вход</button>
+        <button data-tab="register" role="tab">Регистрация</button>
+      </div>
+
+      <div class="auth-msg" id="msg" role="alert"></div>
+
+      <!-- ВХОД -->
+      <form id="loginForm" novalidate>
+        <div class="field"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="email" placeholder="you@company.com" required></div>
+        <div class="field"><label for="lPass">Пароль</label><input id="lPass" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+        <button class="btn" type="submit" id="loginBtn">Войти</button>
+        <div class="demo">
+          Демо-аккаунты (нажмите, чтобы подставить):<br>
+          Сотрудник: <code data-fill="engineer@burmalda.com">engineer@burmalda.com</code><br>
+          Бухгалтер: <code data-fill="accountant@burmalda.com">accountant@burmalda.com</code><br>
+          Пароль: <b>demo1234</b>
+        </div>
+      </form>
+
+      <!-- РЕГИСТРАЦИЯ -->
+      <form id="regForm" novalidate hidden>
+        <div class="role-pick" id="rolePick">
+          <button type="button" class="on" data-role="employee"><b>Сотрудник</b><span>Инженер, дизайнер и др.</span></button>
+          <button type="button" data-role="accountant"><b>Бухгалтер</b><span>Финансы и выплаты</span></button>
+        </div>
+        <div class="field"><label for="rName">Имя и фамилия</label><input id="rName" autocomplete="name" placeholder="Edgar Wilson" required></div>
+        <div class="field"><label for="rEmail">Email</label><input id="rEmail" type="email" autocomplete="email" placeholder="you@company.com" required></div>
+        <div class="two">
+          <div class="field"><label for="rCompany">Компания</label><input id="rCompany" placeholder="Burmalda" required></div>
+          <div class="field" id="deptField"><label for="rDept">Отдел</label>
+            <select id="rDept">
+              <option>Engineering</option><option>Marketing</option><option>Sales</option><option>Design</option><option>Operations</option>
+            </select>
+          </div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="rPass">Пароль</label><input id="rPass" type="password" autocomplete="new-password" placeholder="мин. 8 символов" required></div>
+          <div class="field"><label for="rPass2">Повторите пароль</label><input id="rPass2" type="password" autocomplete="new-password" placeholder="••••••••" required></div>
+        </div>
+        <button class="btn" type="submit" id="regBtn">Создать аккаунт</button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/common.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>
