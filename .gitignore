@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example
+node_modules/
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/

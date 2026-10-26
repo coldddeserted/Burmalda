@@ -1,0 +1,11 @@
+<title>Burmalda</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  :root { --bg:#e8e8e9; --fg:#1c2230; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141416; --fg:#f1f2f5; color-scheme: dark } }
+  :root[data-theme="dark"] { --bg:#141416; --fg:#f1f2f5; color-scheme: dark }
+  body { background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 60vh; padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+  a { color: inherit; font-weight: 600; }
+</style>
+<p>Открываем Burmalda… Если не открылось, <a href="login.html">нажмите сюда</a>.</p>
+<script>location.replace('login.html');</script>
