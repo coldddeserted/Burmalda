@@ -1,0 +1,15 @@
+# Запуск с профилем prod: --spring.profiles.active=prod
+spring:
+  datasource:
+    url: ${DB_URL}            # например jdbc:postgresql://host:5432/burmalda
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  h2:
+    console:
+      enabled: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}     # без дефолта: в проде обязателен
+  seed:
+    enabled: ${SEED_DEMO:false}
