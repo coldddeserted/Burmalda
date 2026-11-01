@@ -42,7 +42,7 @@ public class JwtService {
                       @Value("${app.jwt.ttl-hours:12}") long ttlHours,
                       ObjectMapper mapper) {
         if (secret.length() < 32) {
-            throw new IllegalStateException("app.jwt.secret должен быть минимум 32 символа");
+            throw new IllegalStateException("app.jwt.secret must be at least 32 characters");
         }
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.ttlSeconds = ttlHours * 3600;
@@ -63,7 +63,7 @@ public class JwtService {
             String unsigned = HEADER + "." + body;
             return unsigned + "." + ENC.encodeToString(sign(unsigned));
         } catch (Exception e) {
-            throw new IllegalStateException("Не удалось создать токен", e);
+            throw new IllegalStateException("Could not create token", e);
         }
     }
 

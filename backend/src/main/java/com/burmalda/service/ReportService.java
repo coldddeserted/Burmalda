@@ -157,7 +157,7 @@ public class ReportService {
                     m = m.plusMonths(1);
                 }
             }
-            default -> throw Errors.notFound("Отчёт " + id + " не найден");
+            default -> throw Errors.notFound("Report " + id + " not found");
         }
         String p = period == null ? "month" : period.toLowerCase();
         return new ReportResult(true, id + "-" + p + "-" + LocalDate.now() + ".csv", "CSV", csv.toString());

@@ -42,11 +42,14 @@ app:
     client-secret: ${PAYPAL_CLIENT_SECRET:}
     base-url: ${PAYPAL_BASE_URL:https://api-m.sandbox.paypal.com}
 
-  # LLM для AI Burmalda. Без ключа — ответы по правилам из реальных данных.
+  # AI Burmalda = Google Gemini agent with tools. Free key: aistudio.google.com -> Get API key.
+  # Without a key the chat answers with rules on the same real data.
   ai:
     api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:claude-haiku-5-5}
-    base-url: https://api.anthropic.com
+    model: ${AI_MODEL:gemini-3.8-flash}
+    # comma-separated models to try if the main one is overloaded (503) or rate-limited (429)
+    fallback-models: ${AI_FALLBACK_MODELS:}
+    base-url: https://generativelanguage.googleapis.com
 
   cors:
     # Нужно только если фронт открыт НЕ через localhost:8080 (например, из IDEA на 63342)

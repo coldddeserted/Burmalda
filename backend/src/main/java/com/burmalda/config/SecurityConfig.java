@@ -41,9 +41,9 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) ->
-                                writeJson(res, mapper, HttpServletResponse.SC_UNAUTHORIZED, "Нужно войти в систему"))
+                                writeJson(res, mapper, HttpServletResponse.SC_UNAUTHORIZED, "Please log in"))
                         .accessDeniedHandler((req, res, ex) ->
-                                writeJson(res, mapper, HttpServletResponse.SC_FORBIDDEN, "Недостаточно прав")))
+                                writeJson(res, mapper, HttpServletResponse.SC_FORBIDDEN, "Access denied")))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

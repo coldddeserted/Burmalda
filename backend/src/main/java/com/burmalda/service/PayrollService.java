@@ -84,6 +84,25 @@ public class PayrollService {
         return new EmployeeMonth(u, hours, done, done + open, endedProjects.size(), base, bonus, salary, paid);
     }
 
+    /**
+     * За какой месяц сейчас платим зарплату.
+     * Зарплату платят ПОСЛЕ месяца: 1 ноября платим за октябрь. Поэтому, если за прошлый месяц
+     * у кого-то остались невыплаченные деньги, — платим за прошлый, иначе — за текущий.
+     */
+    public YearMonth payPeriod(String company) {
+        YearMonth prev = YearMonth.now().minusMonths(1);
+        boolean prevUnpaid = companyMonth(company, prev).stream()
+                .anyMatch(e -> !e.paid() && e.salary().signum() > 0);
+        return prevUnpaid ? prev : YearMonth.now();
+    }
+
+    /** То же самое для одного сотрудника. */
+    public YearMonth payPeriod(User u) {
+        YearMonth prev = YearMonth.now().minusMonths(1);
+        EmployeeMonth e = monthFor(u, prev);
+        return !e.paid() && e.salary().signum() > 0 ? prev : YearMonth.now();
+    }
+
     public List<User> employees(String company) {
         return users.findByCompanyAndRoleOrderByNameAsc(company, Role.EMPLOYEE);
     }

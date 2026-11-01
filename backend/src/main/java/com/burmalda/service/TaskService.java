@@ -37,11 +37,11 @@ public class TaskService {
 
     /** Смена статуса. Если все задачи проекта закрыты — проект считается законченным. */
     public void updateStatus(User me, Long id, String status) {
-        Task t = tasks.findById(id).orElseThrow(() -> Errors.notFound("Задача не найдена"));
+        Task t = tasks.findById(id).orElseThrow(() -> Errors.notFound("Task not found"));
         boolean own = t.getAssignee().getId().equals(me.getId());
         boolean accountantOfCompany = me.getRole() == Role.ACCOUNTANT
                 && t.getAssignee().getCompany().equals(me.getCompany());
-        if (!own && !accountantOfCompany) throw Errors.forbidden("Это не ваша задача");
+        if (!own && !accountantOfCompany) throw Errors.forbidden("This is not your task");
 
         TaskStatus newStatus = TaskStatus.from(status);
         t.setStatus(newStatus);
@@ -52,10 +52,10 @@ public class TaskService {
 
     /** Добавить коллеге задачу (кнопка "Add member" на дашборде сотрудника). */
     public TeamMember addMember(User me, Requests.AddMember r) {
-        if (r.email() == null || r.email().isBlank()) throw Errors.badRequest("Укажите email коллеги");
+        if (r.email() == null || r.email().isBlank()) throw Errors.badRequest("Enter your colleague's email");
         User member = users.findByEmailIgnoreCase(r.email().trim())
                 .filter(u -> u.getCompany().equals(me.getCompany()))
-                .orElseThrow(() -> Errors.notFound("Сотрудник с таким email не найден в компании"));
+                .orElseThrow(() -> Errors.notFound("No employee with this email in your company"));
 
         Project general = projects.findFirstByCompanyAndNameIgnoreCase(me.getCompany(), "General")
                 .orElseGet(() -> {
@@ -63,7 +63,7 @@ public class TaskService {
                     p.setName("General");
                     p.setCompany(me.getCompany());
                     p.setStartDate(LocalDate.now());
-                    p.setNote("Задачи без отдельного проекта");
+                    p.setNote("Tasks without a separate project");
                     return projects.save(p);
                 });
 

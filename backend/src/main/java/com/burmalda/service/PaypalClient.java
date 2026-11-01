@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -43,7 +44,10 @@ public class PaypalClient {
                         @Value("${app.paypal.base-url:https://api-m.sandbox.paypal.com}") String baseUrl) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.http = RestClient.builder().baseUrl(baseUrl).build();
+        SimpleClientHttpRequestFactory rf = new SimpleClientHttpRequestFactory();
+        rf.setConnectTimeout(10_000);
+        rf.setReadTimeout(30_000);
+        this.http = RestClient.builder().baseUrl(baseUrl).requestFactory(rf).build();
     }
 
     public record Item(String receiverEmail, BigDecimal amount, String note) {
@@ -86,18 +90,55 @@ public class PaypalClient {
 
             JsonNode bh = res == null ? null : res.path("batch_header");
             if (bh == null || bh.path("payout_batch_id").isMissingNode()) {
-                throw new IllegalStateException("пустой ответ PayPal");
+                throw new IllegalStateException("empty PayPal response");
             }
             return new Batch(bh.path("payout_batch_id").asText(), bh.path("batch_status").asText(), false);
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
             log.error("PayPal payout failed", e);
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal не принял выплату: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal rejected the payout: " + e.getMessage());
         }
     }
 
-    /** OAuth2 client_credentials, токен кэшируем до истечения. */
+    /** Status of one recipient inside a batch: SUCCESS, PENDING, UNCLAIMED, FAILED... */
+    public record ItemStatus(String receiver, BigDecimal amount, String status) {
+    }
+
+    public record BatchStatus(String batchId, String status, List<ItemStatus> items, boolean simulated) {
+    }
+
+    /**
+     * Ask PayPal what happened to a payout batch: GET /v1/payments/payouts/{id}.
+     * UNCLAIMED = the receiver email has no PayPal account yet (in sandbox: not a sandbox account).
+     */
+    public BatchStatus batchStatus(String batchId) {
+        if (batchId == null || batchId.isBlank()) throw new IllegalArgumentException("batchId is required");
+        if (batchId.startsWith("SIM-") || !enabled()) {
+            return new BatchStatus(batchId, "SUCCESS", List.of(), true);
+        }
+        try {
+            JsonNode res = http.get()
+                    .uri("/v1/payments/payouts/{id}", batchId)
+                    .header("Authorization", "Bearer " + token())
+                    .retrieve()
+                    .body(JsonNode.class);
+            if (res == null) throw new IllegalStateException("empty PayPal response");
+            List<ItemStatus> items = new java.util.ArrayList<>();
+            for (JsonNode it : res.path("items")) {
+                JsonNode pi = it.path("payout_item");
+                items.add(new ItemStatus(pi.path("receiver").asText(),
+                        new BigDecimal(pi.path("amount").path("value").asText("0")),
+                        it.path("transaction_status").asText()));
+            }
+            return new BatchStatus(batchId, res.path("batch_header").path("batch_status").asText(), items, false);
+        } catch (Exception e) {
+            log.error("PayPal batch status failed", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal status request failed: " + e.getMessage());
+        }
+    }
+
+    /** OAuth2 client_credentials; the token is cached until it expires. */
     private synchronized String token() {
         if (accessToken != null && Instant.now().isBefore(tokenExpires)) return accessToken;
         String basic = Base64.getEncoder()
@@ -109,7 +150,7 @@ public class PaypalClient {
                 .body("grant_type=client_credentials")
                 .retrieve()
                 .body(JsonNode.class);
-        if (res == null || !res.hasNonNull("access_token")) throw new IllegalStateException("PayPal не выдал токен");
+        if (res == null || !res.hasNonNull("access_token")) throw new IllegalStateException("PayPal did not return a token");
         accessToken = res.get("access_token").asText();
         tokenExpires = Instant.now().plusSeconds(res.path("expires_in").asLong(3000) - 60);
         return accessToken;

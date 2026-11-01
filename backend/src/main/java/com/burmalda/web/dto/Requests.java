@@ -19,7 +19,7 @@ public final class Requests {
     public record Register(
             @NotBlank String name,
             @NotBlank @Email String email,
-            @NotBlank @Size(min = 6, message = "минимум 6 символов") String password,
+            @NotBlank @Size(min = 6, message = "must be at least 6 characters") String password,
             String role,
             String department,
             String company) {

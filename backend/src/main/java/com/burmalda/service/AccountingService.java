@@ -51,7 +51,7 @@ public class AccountingService {
 
     @Transactional(readOnly = true)
     public Team team(User me) {
-        YearMonth m = YearMonth.now();
+        YearMonth m = payroll.payPeriod(me.getCompany());
         List<EmployeePay> employees = payroll.companyMonth(me.getCompany(), m).stream()
                 .map(e -> new EmployeePay(e.user().getId(), e.user().getName(), e.user().getDepartment(),
                         e.tasksDone(), e.tasksTotal(), e.projectsEnded(), e.hours(), e.salary(),
@@ -72,26 +72,26 @@ public class AccountingService {
      * Уже оплаченные пропускаются, сумма считается на сервере (фронту не доверяем).
      */
     public PayResult pay(User me, List<Long> ids) {
-        YearMonth m = YearMonth.now();
+        YearMonth m = payroll.payPeriod(me.getCompany());
         CompanyAccount acc = account(me.getCompany());
 
         List<PayrollService.EmployeeMonth> toPay = new ArrayList<>();
         for (Long id : new LinkedHashSet<>(ids)) {
             User u = users.findById(id)
                     .filter(x -> x.getRole() == Role.EMPLOYEE && x.getCompany().equals(me.getCompany()))
-                    .orElseThrow(() -> Errors.notFound("Сотрудник " + id + " не найден"));
+                    .orElseThrow(() -> Errors.notFound("Employee " + id + " not found"));
             PayrollService.EmployeeMonth em = payroll.monthFor(u, m);
             if (!em.paid() && em.salary().signum() > 0) toPay.add(em);
         }
         if (toPay.isEmpty()) {
-            throw Errors.badRequest("Выбранным сотрудникам нечего платить за " + Fmt.monthYear(m));
+            throw Errors.badRequest("Nothing to pay the selected employees for " + Fmt.monthYear(m));
         }
 
         BigDecimal total = PayrollService.total(toPay);
         BigDecimal fee = Fmt.money(total.multiply(PayrollService.MASS_PAY_FEE_RATE));
         if (acc.getBalance().compareTo(total.add(fee)) < 0) {
-            throw Errors.badRequest("Недостаточно средств на PayPal: нужно $" + total.add(fee)
-                    + ", доступно $" + acc.getBalance());
+            throw Errors.badRequest("Not enough funds on PayPal: need $" + total.add(fee)
+                    + ", available $" + acc.getBalance());
         }
 
         String label = Fmt.monthLong(m) + " salary";
@@ -131,7 +131,7 @@ public class AccountingService {
     @Transactional(readOnly = true)
     public Finance finance(User me) {
         String company = me.getCompany();
-        YearMonth m = YearMonth.now();
+        YearMonth m = payroll.payPeriod(company);
         CompanyAccount acc = account(company);
         List<PayrollService.EmployeeMonth> cur = payroll.companyMonth(company, m);
         BigDecimal unpaidPayroll = PayrollService.unpaidTotal(cur);
@@ -151,13 +151,13 @@ public class AccountingService {
 
         List<MonthValue> months = new ArrayList<>();
         for (int i = 5; i >= 0; i--) {
-            YearMonth ym = m.minusMonths(i);
+            YearMonth ym = YearMonth.now().minusMonths(i);
             months.add(new MonthValue(Fmt.monthShort(ym), PayrollService.total(payroll.companyMonth(company, ym))));
         }
 
         return new Finance(Fmt.money(acc.getBalance()), Fmt.money(acc.getBalance().subtract(reserved)),
                 Fmt.money(reserved), "USD", acc.getBankLabel(), upcoming,
-                budgets.allocation(company, m, cur), months);
+                budgets.allocation(company, YearMonth.now()), months);
     }
 
     /** Пополнить PayPal компании с банковского счёта. */
@@ -174,7 +174,7 @@ public class AccountingService {
     public BigDecimal sendPayment(User me, Requests.Payment r) {
         CompanyAccount acc = account(me.getCompany());
         BigDecimal a = Fmt.money(r.amount());
-        if (acc.getBalance().compareTo(a) < 0) throw Errors.badRequest("Недостаточно средств на PayPal");
+        if (acc.getBalance().compareTo(a) < 0) throw Errors.badRequest("Not enough funds on PayPal");
 
         String to = r.to().trim();
         String note = r.note() == null || r.note().isBlank() ? "Payment" : r.note().trim();
@@ -191,9 +191,9 @@ public class AccountingService {
     public BigDecimal approve(User me, Long id) {
         ScheduledPayment s = scheduled.findById(id)
                 .filter(x -> x.getCompany().equals(me.getCompany()))
-                .orElseThrow(() -> Errors.notFound("Платёж не найден"));
+                .orElseThrow(() -> Errors.notFound("Payment not found"));
         CompanyAccount acc = account(me.getCompany());
-        if (acc.getBalance().compareTo(s.getAmount()) < 0) throw Errors.badRequest("Недостаточно средств на PayPal");
+        if (acc.getBalance().compareTo(s.getAmount()) < 0) throw Errors.badRequest("Not enough funds on PayPal");
 
         acc.setBalance(acc.getBalance().subtract(s.getAmount()));
         txs.save(tx(me.getCompany(), null, LocalDateTime.now(), s.getLabel(),

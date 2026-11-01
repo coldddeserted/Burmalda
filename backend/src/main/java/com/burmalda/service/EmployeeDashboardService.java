@@ -148,6 +148,7 @@ public class EmployeeDashboardService {
     /** Ближайшая выплата (если зарплата за месяц ещё не пришла) + последние реальные. */
     private List<PayoutRow> payoutRows(User me, YearMonth month) {
         List<PayoutRow> rows = new ArrayList<>();
+        month = payroll.payPeriod(me);
         PayrollService.EmployeeMonth cur = payroll.monthFor(me, month);
         if (!cur.paid() && cur.salary().signum() > 0) {
             rows.add(new PayoutRow(Fmt.date(PayrollService.payday(month)),

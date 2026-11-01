@@ -39,7 +39,8 @@ public class WalletService {
     @Transactional(readOnly = true)
     public Wallet wallet(User me) {
         YearMonth m = YearMonth.now();
-        PayrollService.EmployeeMonth cur = payroll.monthFor(me, m);
+        YearMonth period = payroll.payPeriod(me);
+        PayrollService.EmployeeMonth cur = payroll.monthFor(me, period);
         List<Payout> all = payouts.findByUserOrderByDateDesc(me);
 
         List<MonthValue> months = new ArrayList<>();
@@ -57,7 +58,7 @@ public class WalletService {
 
         String email = me.getPaypalEmail() == null ? me.getEmail() : me.getPaypalEmail();
         return new Wallet(Fmt.money(me.getWalletBalance()), "USD", cur.paid() ? BigDecimal.ZERO : cur.salary(),
-                Fmt.date(PayrollService.payday(m)), new PaypalAccount(email, me.isPaypalVerified()),
+                Fmt.date(PayrollService.payday(period)), new PaypalAccount(email, me.isPaypalVerified()),
                 months, history);
     }
 
@@ -65,7 +66,7 @@ public class WalletService {
     public BigDecimal withdraw(User me, BigDecimal amount) {
         BigDecimal a = Fmt.money(amount);
         if (a.compareTo(me.getWalletBalance()) > 0) {
-            throw Errors.badRequest("Недостаточно средств: доступно $" + Fmt.money(me.getWalletBalance()));
+            throw Errors.badRequest("Not enough funds: available $" + Fmt.money(me.getWalletBalance()));
         }
         me.setWalletBalance(me.getWalletBalance().subtract(a));
         users.save(me); // me пришёл из контроллера (вне транзакции) — сохраняем явно

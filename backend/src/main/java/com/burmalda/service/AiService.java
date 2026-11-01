@@ -25,19 +25,16 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 
 /**
- * AI Burmalda.
- * 1) Собираем "факты" из реальных данных пользователя (зарплаты, платежи, часы, задачи).
- * 2) Если задан AI_API_KEY — отдаём факты LLM и она отвечает своими словами.
- * 3) Если нет — отвечаем по правилам на тех же фактах (никаких выдуманных цифр).
+ * AI Burmalda: chat, suggestions, history and the AI summary cards.
+ * The chat itself is the agent in AgentService; this class adds the rule-based fallback.
  */
 @Service
-@Transactional
 public class AiService {
 
     private final PayrollService payroll;
     private final AnomalyService anomalies;
     private final AccountantDashboardService accountantDashboard;
-    private final LlmClient llm;
+    private final AgentService agent;
     private final ChatMessageRepository chats;
     private final PayoutRepository payouts;
     private final TaskRepository tasks;
@@ -45,13 +42,13 @@ public class AiService {
     private final CompanyAccountRepository accounts;
 
     public AiService(PayrollService payroll, AnomalyService anomalies,
-                     AccountantDashboardService accountantDashboard, LlmClient llm, ChatMessageRepository chats,
+                     AccountantDashboardService accountantDashboard, AgentService agent, ChatMessageRepository chats,
                      PayoutRepository payouts, TaskRepository tasks, PaypalTransactionRepository txs,
                      CompanyAccountRepository accounts) {
         this.payroll = payroll;
         this.anomalies = anomalies;
         this.accountantDashboard = accountantDashboard;
-        this.llm = llm;
+        this.agent = agent;
         this.chats = chats;
         this.payouts = payouts;
         this.tasks = tasks;
@@ -59,20 +56,33 @@ public class AiService {
         this.accounts = accounts;
     }
 
-    /* ======================= чат ======================= */
+    /* ======================= chat ======================= */
 
+    /**
+     * With AI_API_KEY: Gemini agent with tools (AgentService) — reads payroll, PayPal transactions,
+     * risk alerts and can pay salaries through PayPal Payouts after the user confirms.
+     * Without a key or if the AI call fails: rule-based answers on the same real data.
+     */
     public String chat(User me, String message) {
         boolean acc = me.getRole() == Role.ACCOUNTANT;
-        String facts = acc ? accountantFacts(me) : employeeFacts(me);
-        String reply = llm.ask(systemPrompt(me, facts), message)
-                .orElseGet(() -> acc ? accountantRules(me, message) : employeeRules(me, message));
+        String reply;
+        String footer = "";
+        Optional<LlmClient.AgentResult> ai = agent.enabled() ? agent.answer(me, message) : Optional.empty();
+        if (ai.isPresent()) {
+            reply = ai.get().text();
+            if (!ai.get().toolsUsed().isEmpty()) {
+                footer = "\n\n🔧 " + String.join(" → ", ai.get().toolsUsed());
+            }
+        } else {
+            reply = acc ? accountantRules(me, message) : employeeRules(me, message);
+        }
 
         ChatMessage c = new ChatMessage();
         c.setUser(me);
         c.setQuestion(message);
         c.setReply(reply.length() > 8000 ? reply.substring(0, 8000) : reply);
         chats.save(c);
-        return reply;
+        return reply + footer;
     }
 
     public List<String> suggestions(User me) {
@@ -83,7 +93,7 @@ public class AiService {
                 "How many hours did I log this week?", "How do I withdraw to my bank?");
     }
 
-    /** Последние уникальные вопросы пользователя. */
+    /** The user's latest unique questions. */
     @Transactional(readOnly = true)
     public List<String> history(User me) {
         LinkedHashSet<String> uniq = new LinkedHashSet<>();
@@ -95,13 +105,13 @@ public class AiService {
         return new ArrayList<>(uniq);
     }
 
-    /* ======================= AI Summary ======================= */
+    /* ======================= AI summary ======================= */
 
     @Transactional(readOnly = true)
     public AiSummary summary(User me) {
         String updated = "Today, " + Fmt.hm(LocalDateTime.now());
         List<SummaryPoint> pts = new ArrayList<>();
-        YearMonth m = YearMonth.now();
+        YearMonth m = me.getRole() == Role.ACCOUNTANT ? payroll.payPeriod(me.getCompany()) : payroll.payPeriod(me);
 
         if (me.getRole() == Role.ACCOUNTANT) {
             var month = payroll.companyMonth(me.getCompany(), m);
@@ -160,73 +170,11 @@ public class AiService {
         return new AiSummary(updated, pts);
     }
 
-    /* ======================= факты для LLM ======================= */
-
-    private String systemPrompt(User me, String facts) {
-        return """
-                You are Burmalda, a PayPal finance assistant inside a payroll and time-tracking app.
-                You talk to %s (%s at %s). Today is %s.
-                Answer briefly (2-4 sentences), in the language of the question.
-                Use ONLY the facts below. If the answer is not in the facts, say you don't have that data.
-                Money is in USD.
-
-                FACTS:
-                %s
-                """.formatted(me.getName(), me.getRole().api(), me.getCompany(), Fmt.date(LocalDate.now()), facts);
-    }
-
-    private String accountantFacts(User me) {
-        StringBuilder f = new StringBuilder();
-        YearMonth m = YearMonth.now();
-        accounts.findByCompany(me.getCompany()).ifPresent(a -> f.append("PayPal business balance: $")
-                .append(money(a.getBalance())).append('\n'));
-        for (var e : payroll.companyMonth(me.getCompany(), m)) {
-            f.append("Employee ").append(e.user().getName()).append(" (").append(e.user().getDepartment())
-                    .append("): ").append(e.hours()).append(" h, tasks ").append(e.tasksDone()).append('/')
-                    .append(e.tasksTotal()).append(", projects ended ").append(e.projectsEnded())
-                    .append(", salary $").append(money(e.salary())).append(e.paid() ? " PAID" : " UNPAID").append('\n');
-        }
-        for (PendingRow p : accountantDashboard.pendingRows(me.getCompany())) {
-            f.append("Pending approval: ").append(p.name()).append(" $").append(money(p.amount()))
-                    .append(", requested by ").append(p.by()).append(", due ").append(p.due()).append('\n');
-        }
-        for (AnomalyRow a : anomalies.detect(me.getCompany())) {
-            f.append("Flagged: ").append(a.title()).append(" - ").append(a.detail()).append(" $")
-                    .append(money(a.amount())).append('\n');
-        }
-        var cf = accountantDashboard.cashFlow(txs.findByCompanyAndOwnerIsNullOrderByDateTimeDesc(me.getCompany()), m);
-        for (int i = 0; i < cf.bars().size(); i++) {
-            f.append("Cash flow week ").append(i + 1).append(": in $").append(cf.bars().get(i).in())
-                    .append("k, out $").append(cf.bars().get(i).out()).append("k\n");
-        }
-        for (SavingRow s : savings(me)) f.append("Saving: ").append(s.label()).append(" $").append(money(s.amount())).append('\n');
-        f.append("Payroll day: ").append(Fmt.date(PayrollService.payday(m))).append('\n');
-        return f.toString();
-    }
-
-    private String employeeFacts(User me) {
-        StringBuilder f = new StringBuilder();
-        YearMonth m = YearMonth.now();
-        var cur = payroll.monthFor(me, m);
-        f.append("Wallet balance: $").append(money(me.getWalletBalance())).append('\n');
-        f.append("Hourly rate: $").append(money(me.getHourlyRate())).append('\n');
-        f.append("This month: ").append(cur.hours()).append(" h, salary so far $").append(money(cur.salary()))
-                .append(cur.paid() ? " (paid)" : " (to be paid on " + Fmt.date(PayrollService.payday(m)) + ")").append('\n');
-        f.append("Hours this week: ").append(Fmt.round1(weekHours(me, LocalDate.now()))).append('\n');
-        payouts.findByUserOrderByDateDesc(me).stream().limit(5).forEach(p -> f.append("Payout ")
-                .append(Fmt.date(p.getDate())).append(": ").append(p.getLabel()).append(" $").append(money(p.getAmount()))
-                .append(' ').append(p.getStatus().api()).append('\n'));
-        tasks.findByAssigneeOrderByDueDateAsc(me).forEach(t -> f.append("Task: ").append(t.getTitle())
-                .append(" [").append(t.getStatus().api()).append("], due ").append(Fmt.date(t.getDueDate())).append('\n'));
-        f.append("Withdraw: My wallet -> Withdraw to PayPal; bank transfer takes 1-3 business days.\n");
-        return f.toString();
-    }
-
-    /* ======================= ответы без LLM ======================= */
+    /* ======================= rule-based answers (no AI key) ======================= */
 
     private String accountantRules(User me, String q) {
         String t = q.toLowerCase();
-        YearMonth m = YearMonth.now();
+        YearMonth m = payroll.payPeriod(me.getCompany());
         if (has(t, "pending", "approv", "одобр", "ожида")) {
             List<PendingRow> p = accountantDashboard.pendingRows(me.getCompany());
             if (p.isEmpty()) return "No payments are waiting for approval right now.";
@@ -255,10 +203,11 @@ public class AiService {
             return sb.toString();
         }
         if (has(t, "cash", "flow", "поток", "приход", "расход")) {
-            var cf = accountantDashboard.cashFlow(txs.findByCompanyAndOwnerIsNullOrderByDateTimeDesc(me.getCompany()), m);
+            YearMonth cfMonth = YearMonth.now();
+            var cf = accountantDashboard.cashFlow(txs.findByCompanyAndOwnerIsNullOrderByDateTimeDesc(me.getCompany()), cfMonth);
             double in = cf.bars().stream().mapToDouble(b -> b.in()).sum();
             double out = cf.bars().stream().mapToDouble(b -> b.out()).sum();
-            return Fmt.monthLong(m) + " so far: inflow $" + Fmt.round1(in) + "k, outflow $" + Fmt.round1(out) + "k, net $"
+            return Fmt.monthLong(cfMonth) + " so far: inflow $" + Fmt.round1(in) + "k, outflow $" + Fmt.round1(out) + "k, net $"
                     + Fmt.round1(in - out) + "k. Forecast for next week: $" + cf.forecast().get(cf.forecast().size() - 1) + "k inflow.";
         }
         if (has(t, "save", "saving", "mass", "эконом")) {
@@ -278,7 +227,7 @@ public class AiService {
 
     private String employeeRules(User me, String q) {
         String t = q.toLowerCase();
-        YearMonth m = YearMonth.now();
+        YearMonth m = payroll.payPeriod(me);
         if (has(t, "payday", "salary", "зарплат", "зп", "когда")) {
             var cur = payroll.monthFor(me, m);
             if (cur.paid()) return "Your " + Fmt.monthLong(m) + " salary ($" + money(cur.salary()) + ") is already on your PayPal account.";

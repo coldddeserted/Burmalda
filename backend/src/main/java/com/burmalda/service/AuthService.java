@@ -39,7 +39,7 @@ public class AuthService {
     public UserDto register(Requests.Register r) {
         String email = r.email().trim().toLowerCase();
         if (users.existsByEmailIgnoreCase(email)) {
-            throw Errors.conflict("Пользователь с таким email уже существует");
+            throw Errors.conflict("A user with this email already exists");
         }
         User u = new User();
         u.setName(r.name().trim());
@@ -65,7 +65,7 @@ public class AuthService {
     public LoginResponse login(Requests.Login r) {
         User u = users.findByEmailIgnoreCase(r.email().trim())
                 .filter(x -> encoder.matches(r.password(), x.getPasswordHash()))
-                .orElseThrow(() -> Errors.unauthorized("Неверный email или пароль"));
+                .orElseThrow(() -> Errors.unauthorized("Invalid email or password"));
         return new LoginResponse(jwt.issue(u), UserDto.from(u));
     }
 

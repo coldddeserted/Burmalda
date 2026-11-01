@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.util.Map;
 
-/** Проверка, что сервер жив, и в каком режиме PayPal / AI: GET /api/health */
+/** Is the server alive, and in which mode are PayPal and AI: GET /api/health */
 @RestController
 @RequestMapping("/api")
 public class HealthController {
@@ -28,6 +28,6 @@ public class HealthController {
                 "status", "ok",
                 "time", Instant.now().toString(),
                 "paypal", paypal.enabled() ? "sandbox" : "simulated",
-                "ai", llm.enabled() ? "llm" : "rules");
+                "ai", llm.enabled() ? "gemini:" + llm.model() : "rules");
     }
 }
