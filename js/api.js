@@ -6,8 +6,10 @@
    эндпоинты из README.md (контракты уже описаны в функциях ниже).
    ===================================================================== */
 const CONFIG = {
-  USE_MOCK: true,
-  BASE_URL: '/api'
+  USE_MOCK: false,
+  // Если страницу отдаёт сам бэкенд (localhost:8080) — относительный путь,
+  // если открыта откуда-то ещё (например, из IDEA на :63342) — идём на бэк напрямую.
+  BASE_URL: location.port === '8080' ? '/api' : 'http://localhost:8080/api'
 };
 
 const LS = {
@@ -30,7 +32,11 @@ async function http(method, path, body) {
     method, headers, body: body ? JSON.stringify(body) : undefined
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Ошибка сервера (' + res.status + ')');
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    localStorage.removeItem(LS.session); localStorage.removeItem(LS.token);
+    if (!location.pathname.endsWith('login.html')) location.href = 'login.html';
+  }
+  if (!res.ok) throw new Error(data.message || 'Server error (' + res.status + ')');
   return data;
 }
 
@@ -346,7 +352,7 @@ const API = {
     }
     await sleep(450);
     const u = readJSON(LS.users, []).find((x) => x.email.toLowerCase() === email.toLowerCase());
-    if (!u || u.password !== password) throw new Error('Неверный email или пароль');
+    if (!u || u.password !== password) throw new Error('Incorrect email or password');
     const { password: _p, ...user } = u;
     localStorage.setItem(LS.session, JSON.stringify(user));
     return user;
@@ -358,7 +364,7 @@ const API = {
     await sleep(500);
     const users = readJSON(LS.users, []);
     if (users.some((x) => x.email.toLowerCase() === data.email.toLowerCase()))
-      throw new Error('Пользователь с таким email уже существует');
+      throw new Error('A user with this email already exists');
     const user = { id: Date.now(), ...data };
     users.push(user);
     localStorage.setItem(LS.users, JSON.stringify(users));
@@ -512,7 +518,18 @@ const API = {
     return MOCK2.reports(role);
   },
   async generateReport(id, format, period) {
-    if (!CONFIG.USE_MOCK) return http('POST', '/reports/' + id + '/generate', { format, period });
+    if (!CONFIG.USE_MOCK) {
+      const r = await http('POST', '/reports/' + id + '/generate', { format, period });
+      // бэк возвращает готовый CSV — сразу скачиваем файлом
+      if (r && r.content) {
+        const url = URL.createObjectURL(new Blob([r.content], { type: 'text/csv;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url; a.download = r.filename || (id + '.csv');
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      return r;
+    }
     await sleep(500); return { ok: true };
   }
 };

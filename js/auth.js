@@ -26,7 +26,7 @@
     loginForm.hidden = name !== 'login';
     regForm.hidden = name !== 'register';
     $('#title').textContent = name === 'login' ? 'Welcome back' : 'Create account';
-    $('#subtitle').textContent = name === 'login' ? 'Войдите в свой аккаунт' : 'Зарегистрируйтесь как бухгалтер или сотрудник';
+    $('#subtitle').textContent = name === 'login' ? 'Sign in to your account' : 'Sign up as an accountant or an employee';
   }
   $$('.tabs button').forEach((b) => b.onclick = () => tab(b.dataset.tab));
 
@@ -48,15 +48,15 @@
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault(); hide();
     const email = $('#lEmail').value.trim(), pass = $('#lPass').value;
-    if (!emailOk(email)) return show('Введите корректный email', 'err');
-    if (!pass) return show('Введите пароль', 'err');
-    const btn = $('#loginBtn'); btn.disabled = true; btn.textContent = 'Входим…';
+    if (!emailOk(email)) return show('Enter a valid email', 'err');
+    if (!pass) return show('Enter your password', 'err');
+    const btn = $('#loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…';
     try {
       const user = await API.login(email, pass);
       location.replace(home(user));
     } catch (err) {
       show(err.message, 'err');
-      btn.disabled = false; btn.textContent = 'Войти';
+      btn.disabled = false; btn.textContent = 'Sign in';
     }
   });
 
@@ -70,22 +70,22 @@
       department: role === 'accountant' ? 'Finance' : $('#rDept').value,
       password: $('#rPass').value
     };
-    if (data.name.length < 2) return show('Введите имя', 'err');
-    if (!emailOk(data.email)) return show('Введите корректный email', 'err');
-    if (!data.company) return show('Укажите компанию', 'err');
-    if (data.password.length < 8) return show('Пароль — минимум 8 символов', 'err');
-    if (data.password !== $('#rPass2').value) return show('Пароли не совпадают', 'err');
+    if (data.name.length < 2) return show('Enter your name', 'err');
+    if (!emailOk(data.email)) return show('Enter a valid email', 'err');
+    if (!data.company) return show('Enter your company', 'err');
+    if (data.password.length < 8) return show('Password must be at least 8 characters', 'err');
+    if (data.password !== $('#rPass2').value) return show('Passwords do not match', 'err');
 
-    const btn = $('#regBtn'); btn.disabled = true; btn.textContent = 'Создаём…';
+    const btn = $('#regBtn'); btn.disabled = true; btn.textContent = 'Creating…';
     try {
       await API.register(data);
-      regForm.reset(); btn.disabled = false; btn.textContent = 'Создать аккаунт';
+      regForm.reset(); btn.disabled = false; btn.textContent = 'Create account';
       tab('login');
       $('#lEmail').value = data.email;
-      show('Аккаунт создан! Теперь войдите.', 'ok');
+      show('Account created! Now sign in.', 'ok');
     } catch (err) {
       show(err.message, 'err');
-      btn.disabled = false; btn.textContent = 'Создать аккаунт';
+      btn.disabled = false; btn.textContent = 'Create account';
     }
   });
 })();
