@@ -41,6 +41,8 @@ In IDEA: Run → Edit Configurations → `BurmaldaApplication` → *Environment 
 
 Production (PostgreSQL): profile `prod` + `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`.
 
+Deployment: the `Dockerfile` in the repository root builds this backend and bundles the frontend; `render.yaml` deploys it to Render (`PORT` is read from the environment, `H2_CONSOLE=false` hides the database console).
+
 ## How it works
 
 ### Payroll

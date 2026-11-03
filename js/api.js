@@ -7,9 +7,10 @@
    ===================================================================== */
 const CONFIG = {
   USE_MOCK: false,
-  // Если страницу отдаёт сам бэкенд (localhost:8080) — относительный путь,
-  // если открыта откуда-то ещё (например, из IDEA на :63342) — идём на бэк напрямую.
-  BASE_URL: location.port === '8080' ? '/api' : 'http://localhost:8080/api'
+  // Normally the backend serves these pages itself (localhost:8080 or the deployed site) -> same origin.
+  // Opened from the IDEA preview (:63342), Live Server (:5500) or as a file -> call the local backend directly.
+  BASE_URL: (location.protocol === 'file:' || ['63342', '5500'].includes(location.port))
+    ? 'http://localhost:8080/api' : '/api'
 };
 
 const LS = {

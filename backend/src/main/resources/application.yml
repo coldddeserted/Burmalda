@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}   # hosting platforms (Render) pass the port in PORT
 
 spring:
   application:
@@ -14,7 +14,7 @@ spring:
 
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE:true}   # switched off on the public deployment (render.yaml)
       path: /h2-console   # http://localhost:8080/h2-console
 
   jpa:

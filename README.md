@@ -62,6 +62,15 @@ The app starts with six months of demo data (dates relative to today).
 
 Details: [backend/README.md](backend/README.md). Check http://localhost:8080/api/health — it shows whether PayPal and AI are live.
 
+### Docker
+```bash
+docker build -t burmalda .
+docker run -p 8080:8080 -e PAYPAL_CLIENT_ID=... -e PAYPAL_CLIENT_SECRET=... -e AI_API_KEY=... burmalda
+```
+
+### Deploy to Render
+The repository has a [`render.yaml`](render.yaml) blueprint: Render dashboard → **New → Blueprint** → pick this repository → enter the PayPal and Gemini keys. Every start comes with fresh demo data; the H2 console is switched off on the public deployment.
+
 ## Tech stack
 - **Backend:** Java 21, Spring Boot 3.5, Spring Security + JWT, Spring Data JPA, H2 / PostgreSQL, Maven
 - **Frontend:** plain HTML, CSS and JavaScript, no build step

@@ -1,0 +1,21 @@
+# Render Blueprint: dashboard.render.com -> New -> Blueprint -> pick this repository.
+# Secrets are asked for during setup (sync: false) and never stored in git.
+services:
+  - type: web
+    name: burmalda
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: H2_CONSOLE
+        value: "false"
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: AI_API_KEY
+        sync: false
