@@ -7,7 +7,7 @@ The server behind Burmalda: employees track time and tasks → salaries are calc
 ## Quick start
 1. IntelliJ IDEA → **File → Open** → this `backend` folder (Maven loads by itself). JDK 21+.
 2. Run `BurmaldaApplication`.
-3. Open **http://localhost:8080** — the frontend is served by the backend (`src/main/resources/static`).
+3. Open **http://localhost:8080** — the backend serves the frontend straight from the repository root (`../login.html`, `../js`, `../css`): one copy for the whole team, edits show up after F5 without a restart. Only html/css/js files are exposed. Another location: `FRONTEND_DIR=/path/to/frontend`.
 
 Demo logins (password `demo1234` for all):
 
@@ -102,7 +102,7 @@ All paths start with `/api`. Auth: `Authorization: Bearer <token>`. Errors: `{"m
 ## Structure
 ```
 com.burmalda
-├── config/      SecurityConfig (roles, JWT), WebConfig (CORS), DataSeeder (demo data)
+├── config/      SecurityConfig (roles, JWT), WebConfig (CORS), FrontendConfig (serves ../ frontend), DataSeeder (demo data)
 ├── security/    JwtService (HS256 by hand, no libraries), JwtAuthFilter, AuthUser
 ├── domain/      entities: User, Project, Task, TimeLog, Payout, PaypalTransaction,
 │                ScheduledPayment, DepartmentBudget, CompanyAccount, ComplianceItem, ChatMessage
