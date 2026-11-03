@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/** Вопрос пользователя к AI Burmalda и ответ — для истории чата. */
+/** A user's question to AI Burmalda and the answer — for the chat history. */
 @Entity
 @Getter
 @Setter

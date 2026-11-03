@@ -14,7 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
 
 /**
- * Фронт (js/api.js) читает ошибку как { "message": "..." } — отдаём ровно так.
+ * The frontend (js/api.js) reads errors as { "message": "..." } — so that is what we return.
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -48,7 +48,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleOther(Exception e) {
-        // Стандартные ошибки Spring (404 нет такого пути, 405 не тот метод и т.п.) — со своим статусом
+        // Standard Spring errors (404 no such path, 405 wrong method, etc.) keep their status
         if (e instanceof ErrorResponse er) {
             return ResponseEntity.status(er.getStatusCode())
                     .body(Map.of("message", "Request error (" + er.getStatusCode().value() + ")"));

@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/** Месячный бюджет отдела. Потрачено считается из зарплат и расходов отдела. */
+/** Monthly department budget. Spending is calculated from the department's salaries and expenses. */
 @Entity
 @Getter
 @Setter

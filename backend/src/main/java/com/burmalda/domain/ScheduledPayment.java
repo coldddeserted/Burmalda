@@ -8,7 +8,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Запланированный платёж компании. Пока не approved — висит в "Pending Approvals". */
+/** A scheduled company payment. Until approved it shows in "Pending Approvals". */
 @Entity
 @Getter
 @Setter

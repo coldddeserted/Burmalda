@@ -27,16 +27,16 @@ public class TimeService {
     }
 
     /**
-     * Фронт стартует таймер с "уже отработано сегодня" и при Stop шлёт текущее значение,
-     * потом сбрасывает в 0. Поэтому:
-     *  - seconds > сегодняшнего итога -> это продолжение, пишем разницу;
-     *  - иначе -> это новая сессия с нуля, пишем seconds целиком.
+     * The frontend starts the timer from "already worked today" and on Stop sends the current value,
+     * then resets to 0. So:
+     *  - seconds > today's total -> it is a continuation, store the difference;
+     *  - otherwise -> a new session from zero, store seconds as is.
      */
     public long log(User me, long seconds, String label) {
         long today = payroll.secondsOn(me, LocalDate.now());
         long delta = seconds > today ? seconds - today : seconds;
         if (delta <= 0) return 0;
-        delta = Math.min(delta, 16 * 3600); // защита от мусора: не больше 16 часов за раз
+        delta = Math.min(delta, 16 * 3600); // guard against garbage: at most 16 hours at once
 
         String what = label != null && !label.isBlank() ? label : currentProject(me);
         timeLogs.save(new TimeLog(me, LocalDateTime.now().minusSeconds(delta), delta, what));

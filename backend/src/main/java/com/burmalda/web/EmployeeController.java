@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/** Задачи, трекер времени, кошелёк, добавление задачи коллеге. */
+/** Tasks, time tracker, wallet, giving a colleague a task. */
 @RestController
 @RequestMapping("/api")
 public class EmployeeController {

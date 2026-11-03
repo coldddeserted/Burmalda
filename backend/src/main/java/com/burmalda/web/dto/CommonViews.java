@@ -5,7 +5,7 @@ import com.burmalda.domain.User;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Ответы, общие для обеих ролей. */
+/** Responses shared by both roles. */
 public final class CommonViews {
 
     private CommonViews() {
@@ -37,7 +37,7 @@ public final class CommonViews {
     public record MonthValue(String m, BigDecimal v) {
     }
 
-    /** Строка выплаты: дашборд сотрудника, кошелёк. */
+    /** A payout row: employee dashboard, wallet. */
     public record PayoutRow(String date, String label, BigDecimal amount, String status) {
     }
 
@@ -54,7 +54,7 @@ public final class CommonViews {
     public record ReportDef(String id, String name, String desc, List<String> formats) {
     }
 
-    /** content — готовый CSV, filename — как его сохранить. */
+    /** content — the ready CSV, filename — how to save it. */
     public record ReportResult(boolean ok, String filename, String format, String content) {
     }
 

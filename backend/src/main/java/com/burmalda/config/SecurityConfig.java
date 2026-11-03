@@ -24,20 +24,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtFilter,
                                                    ObjectMapper mapper) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())          // REST + Bearer-токены: CSRF не нужен
-                .cors(cors -> {})                      // настройки CORS — в WebConfig
+                .csrf(csrf -> csrf.disable())          // REST + Bearer tokens: no CSRF needed
+                .cors(cors -> {})                      // CORS settings live in WebConfig
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // для H2-консоли
+                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // for the H2 console
                 .authorizeHttpRequests(auth -> auth
-                        // открыто всем
+                        // open to everyone
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/health").permitAll()
                         .requestMatchers("/h2-console/**", "/error").permitAll()
-                        // по ролям
+                        // by role
                         .requestMatchers("/api/accounting/**", "/api/dashboard/accountant").hasRole("ACCOUNTANT")
                         .requestMatchers("/api/dashboard/employee", "/api/wallet/**", "/api/time/**").hasRole("EMPLOYEE")
-                        // остальное API — любой залогиненный
+                        // the rest of the API — any logged-in user
                         .requestMatchers("/api/**").authenticated()
-                        // всё прочее — статика фронта (html/css/js)
+                        // everything else — frontend static files (html/css/js)
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) ->
@@ -49,9 +49,9 @@ public class SecurityConfig {
     }
 
     /**
-     * JwtAuthFilter — @Component, и Spring Boot по умолчанию повесил бы его ещё и как обычный
-     * сервлет-фильтр (до Spring Security). Тогда внутри цепочки безопасности он бы уже не сработал
-     * и все запросы получали бы 401. Поэтому авто-регистрацию выключаем: фильтр живёт только в цепочке выше.
+     * JwtAuthFilter is a @Component, so by default Spring Boot would also register it as a plain
+     * servlet filter (before Spring Security). Then it would not run inside the security chain
+     * and every request would get 401. So auto-registration is disabled: the filter lives only in the chain above.
      */
     @Bean
     public FilterRegistrationBean<JwtAuthFilter> jwtFilterRegistration(JwtAuthFilter filter) {

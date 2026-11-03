@@ -8,7 +8,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Выплата сотруднику (зарплата, бонус, возврат расходов). */
+/** A payout to an employee (salary, bonus, expense refund). */
 @Entity
 @Getter
 @Setter
@@ -34,9 +34,9 @@ public class Payout {
     @Column(nullable = false)
     private PayoutStatus status;
 
-    /** За какой месяц зарплата, формат "2026-10". У бонусов/возвратов может быть null. */
+    /** Which month the salary is for, format "2026-10". May be null for bonuses/refunds. */
     private String period;
 
-    /** ID пачки PayPal Mass Pay. */
+    /** PayPal Mass Pay batch id. */
     private String batchId;
 }

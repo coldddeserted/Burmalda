@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Только для роли ACCOUNTANT (ограничение в SecurityConfig). */
+/** ACCOUNTANT role only (enforced in SecurityConfig). */
 @RestController
 @RequestMapping("/api/accounting")
 public class AccountingController {
@@ -57,7 +57,7 @@ public class AccountingController {
         return accounting.team(users.require(me));
     }
 
-    /** PayPal Mass Pay выбранным сотрудникам. */
+    /** PayPal Mass Pay to the selected employees. */
     @PostMapping("/pay")
     public PayResult pay(@AuthenticationPrincipal AuthUser me, @Valid @RequestBody Requests.Pay body) {
         return accounting.pay(users.require(me), body.ids());

@@ -3,7 +3,7 @@ package com.burmalda.util;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Короткие фабрики ошибок. ApiExceptionHandler превращает их в {"message": "..."}. */
+/** Short error factories. ApiExceptionHandler turns them into {"message": "..."}. */
 public final class Errors {
 
     private Errors() {

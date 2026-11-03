@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** GET /api/paypal/transactions: бухгалтеру — счёт компании, сотруднику — его кошелёк. */
+/** GET /api/paypal/transactions: the company account for the accountant, own wallet for an employee. */
 @Service
 @Transactional(readOnly = true)
 public class TransactionService {

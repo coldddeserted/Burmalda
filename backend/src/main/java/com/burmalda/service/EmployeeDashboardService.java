@@ -22,13 +22,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** GET /api/dashboard/employee — всё для главной сотрудника. */
+/** GET /api/dashboard/employee — everything for the employee's home page. */
 @Service
 @Transactional(readOnly = true)
 public class EmployeeDashboardService {
 
     private static final String[] DAY_LETTERS = {"S", "M", "T", "W", "T", "F", "S"};
-    /** Сколько часов за день считаем за 100% высоты столбика. */
+    /** How many hours a day count as a 100% bar. */
     private static final double FULL_DAY_HOURS = 10.0;
 
     private final TaskRepository tasks;
@@ -49,7 +49,7 @@ public class EmployeeDashboardService {
         YearMonth month = YearMonth.now();
         List<Task> myTasks = tasks.findByAssigneeOrderByDueDateAsc(me);
 
-        // проекты, в которых у меня есть задачи
+        // projects where I have tasks
         Map<Long, Project> projects = new LinkedHashMap<>();
         for (Task t : myTasks) projects.putIfAbsent(t.getProject().getId(), t.getProject());
         List<Project> ended = projects.values().stream().filter(p -> p.getStatus() == ProjectStatus.ENDED)
@@ -63,7 +63,7 @@ public class EmployeeDashboardService {
         int startedThisMonth = (int) running.stream()
                 .filter(p -> p.getStartDate() != null && YearMonth.from(p.getStartDate()).equals(month)).count();
 
-        // все логи за полгода — для "сколько заработал на проекте"
+        // all logs for half a year — for "how much I earned on a project"
         List<TimeLog> logs = payroll.logs(me, month.minusMonths(6).atDay(1).atStartOfDay(),
                 today.plusDays(1).atStartOfDay());
 
@@ -87,7 +87,7 @@ public class EmployeeDashboardService {
                         sessions(me, today)));
     }
 
-    /** Столбики по дням текущей недели (Вс..Сб). Будущие дни — штрихованные, показывают прошлую неделю. */
+    /** Bars for the days of this week (Sun..Sat). Future days are hatched and show last week. */
     private List<DayBar> weekAnalytics(User me, LocalDate today) {
         LocalDate sunday = today.minusDays(today.getDayOfWeek().getValue() % 7);
         int[] values = new int[7];
@@ -114,7 +114,7 @@ public class EmployeeDashboardService {
         return res;
     }
 
-    /** Коллеги из моего отдела и над чем они сейчас работают. */
+    /** Colleagues from my department and what they are working on now. */
     private List<TeamMember> team(User me) {
         List<User> mates = users.findByCompanyAndDepartmentAndRole(me.getCompany(), me.getDepartment(), Role.EMPLOYEE);
         List<TeamMember> res = new ArrayList<>();
@@ -135,7 +135,7 @@ public class EmployeeDashboardService {
         return res;
     }
 
-    /** Проценты задач: закрыто / в работе / ждут. В сумме ровно 100. */
+    /** Task percentages: done / in progress / pending. They add up to exactly 100. */
     private Progress progress(List<Task> my) {
         if (my.isEmpty()) return new Progress(0, 0, 100);
         long done = my.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
@@ -145,7 +145,7 @@ public class EmployeeDashboardService {
         return new Progress(c, p, Math.max(0, 100 - c - p));
     }
 
-    /** Ближайшая выплата (если зарплата за месяц ещё не пришла) + последние реальные. */
+    /** The next payout (if this period's salary has not arrived yet) + the latest real ones. */
     private List<PayoutRow> payoutRows(User me, YearMonth month) {
         List<PayoutRow> rows = new ArrayList<>();
         month = payroll.payPeriod(me);
@@ -161,7 +161,7 @@ public class EmployeeDashboardService {
         return rows;
     }
 
-    /** Сколько я заработал на проекте: мои часы на нём × ставка. */
+    /** How much I earned on a project: my hours on it × rate. */
     private BigDecimal earnedOn(User me, List<TimeLog> logs, String projectName) {
         long secs = logs.stream().filter(l -> projectName.equalsIgnoreCase(l.getLabel()))
                 .mapToLong(TimeLog::getSeconds).sum();

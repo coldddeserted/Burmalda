@@ -19,12 +19,12 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
 
-/** Отчёты. Генерим CSV (открывается в Excel/Google Sheets) за Month / Quarter / Year. */
+/** Reports. Generates CSV (opens in Excel/Google Sheets) for Month / Quarter / Year. */
 @Service
 @Transactional(readOnly = true)
 public class ReportService {
 
-    /** Условная ставка удержания налога для отчёта Tax withholding. */
+    /** Assumed tax withholding rate for the Tax withholding report. */
     private static final BigDecimal TAX_RATE = new BigDecimal("0.18");
 
     private static final List<ReportDef> ACCOUNTANT = List.of(
@@ -163,7 +163,7 @@ public class ReportService {
         return new ReportResult(true, id + "-" + p + "-" + LocalDate.now() + ".csv", "CSV", csv.toString());
     }
 
-    /** Month -> текущий месяц, Quarter -> 3 последних, Year -> с января. */
+    /** Month -> this month, Quarter -> last 3 months, Year -> since January. */
     private static List<YearMonth> months(String period) {
         YearMonth now = YearMonth.now();
         int n = switch (period == null ? "month" : period.toLowerCase()) {
@@ -176,7 +176,7 @@ public class ReportService {
         return res;
     }
 
-    /** Мини-построитель CSV с экранированием кавычек. */
+    /** Tiny CSV builder with quote escaping. */
     private static final class Csv {
         private final StringBuilder sb = new StringBuilder();
 

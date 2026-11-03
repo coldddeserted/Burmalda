@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface TimeLogRepository extends JpaRepository<TimeLog, Long> {
 
-    /** Интервал [from, to) — to не включительно. */
+    /** Interval [from, to) — to is exclusive. */
     List<TimeLog> findByUserAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtAsc(
             User user, LocalDateTime from, LocalDateTime to);
 }

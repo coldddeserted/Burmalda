@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Пункт чек-листа документов (налоговые отчёты, формы подрядчиков и т.п.). */
+/** A document checklist item (tax reports, contractor forms, etc.). */
 @Entity
 @Getter
 @Setter

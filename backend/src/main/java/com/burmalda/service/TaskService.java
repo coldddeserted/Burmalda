@@ -35,7 +35,7 @@ public class TaskService {
         return tasks.findByAssigneeOrderByDueDateAsc(me).stream().map(TaskService::toDto).toList();
     }
 
-    /** Смена статуса. Если все задачи проекта закрыты — проект считается законченным. */
+    /** Status change. When all tasks of a project are done, the project counts as ended. */
     public void updateStatus(User me, Long id, String status) {
         Task t = tasks.findById(id).orElseThrow(() -> Errors.notFound("Task not found"));
         boolean own = t.getAssignee().getId().equals(me.getId());
@@ -50,7 +50,7 @@ public class TaskService {
         recalcProject(t.getProject());
     }
 
-    /** Добавить коллеге задачу (кнопка "Add member" на дашборде сотрудника). */
+    /** Give a colleague a task ("Add member" button on the employee dashboard). */
     public TeamMember addMember(User me, Requests.AddMember r) {
         if (r.email() == null || r.email().isBlank()) throw Errors.badRequest("Enter your colleague's email");
         User member = users.findByEmailIgnoreCase(r.email().trim())
@@ -86,7 +86,7 @@ public class TaskService {
             p.setStatus(ProjectStatus.ENDED);
             p.setEndDate(LocalDate.now());
         } else if (done < all.size() && p.getStatus() == ProjectStatus.ENDED) {
-            p.setStatus(ProjectStatus.RUNNING); // задачу переоткрыли
+            p.setStatus(ProjectStatus.RUNNING); // a task was reopened
             p.setEndDate(null);
         }
     }

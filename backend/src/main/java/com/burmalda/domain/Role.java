@@ -1,6 +1,6 @@
 package com.burmalda.domain;
 
-/** Роль пользователя. Во фронте приходит строкой в нижнем регистре: "employee" / "accountant". */
+/** User role. The frontend sends it in lower case: "employee" / "accountant". */
 public enum Role {
     EMPLOYEE, ACCOUNTANT;
 

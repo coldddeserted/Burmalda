@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Бюджеты отделов за месяц.
- * Потрачено = зарплаты сотрудников отдела (из PayrollService) + расходы компании, помеченные этим отделом.
+ * Department budgets for a month.
+ * Spent = salaries of the department (from PayrollService) + company expenses tagged with this department.
  */
 @Service
 @Transactional(readOnly = true)
@@ -50,7 +50,7 @@ public class BudgetService {
             for (PaypalTransaction t : companyTx) {
                 boolean thisMonth = YearMonth.from(t.getDateTime()).equals(m);
                 if (thisMonth && t.getDirection() == TxDirection.OUT && t.getStatus() == TxStatus.COMPLETED
-                        && t.getCategory() != TxCategory.PAYROLL // зарплаты уже посчитаны выше
+                        && t.getCategory() != TxCategory.PAYROLL // salaries are already counted above
                         && dept.equalsIgnoreCase(t.getDepartment())) {
                     expenses = expenses.add(t.getAmount());
                 }
@@ -64,7 +64,7 @@ public class BudgetService {
         return allocation(company, m, payroll.companyMonth(company, m));
     }
 
-    /** Остаток бюджета по всем отделам (отрицательные не учитываем). */
+    /** Budget left over all departments (negative ones are ignored). */
     public static BigDecimal available(List<AllocRow> alloc) {
         return alloc.stream()
                 .map(a -> a.allocated().subtract(a.spent()).max(BigDecimal.ZERO))

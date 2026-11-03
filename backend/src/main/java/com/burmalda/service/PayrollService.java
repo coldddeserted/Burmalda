@@ -19,19 +19,19 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Сердце Бурмалды: сколько сотрудник заработал за месяц.
+ * The heart of Burmalda: how much an employee earned in a month.
  *
- *   зарплата = отработанные часы × ставка в час
- *            + PROJECT_BONUS за каждый проект, который закрылся в этом месяце и где у сотрудника были задачи
+ *   salary = tracked hours × hourly rate
+ *            + PROJECT_BONUS for every project that ended this month where the employee had tasks
  *
- * Всё считается из реальных данных: TimeLog (трекер), Task (задачи), Project (проекты).
+ * Everything comes from real data: TimeLog (tracker), Task (tasks), Project (projects).
  */
 @Service
 @Transactional(readOnly = true)
 public class PayrollService {
 
     public static final BigDecimal PROJECT_BONUS = new BigDecimal("150.00");
-    /** Комиссия PayPal Mass Pay (условно) и обычного перевода — разница = экономия. */
+    /** Assumed PayPal fee for Mass Pay vs a single transfer — the difference is the saving. */
     public static final BigDecimal MASS_PAY_FEE_RATE = new BigDecimal("0.01");
     public static final BigDecimal SINGLE_PAYOUT_FEE_RATE = new BigDecimal("0.02");
 
@@ -48,7 +48,7 @@ public class PayrollService {
         this.payouts = payouts;
     }
 
-    /** Итог по сотруднику за месяц. */
+    /** An employee's result for a month. */
     public record EmployeeMonth(User user, double hours, int tasksDone, int tasksTotal, int projectsEnded,
                                 BigDecimal basePay, BigDecimal bonus, BigDecimal salary, boolean paid) {
     }
@@ -85,9 +85,9 @@ public class PayrollService {
     }
 
     /**
-     * За какой месяц сейчас платим зарплату.
-     * Зарплату платят ПОСЛЕ месяца: 1 ноября платим за октябрь. Поэтому, если за прошлый месяц
-     * у кого-то остались невыплаченные деньги, — платим за прошлый, иначе — за текущий.
+     * Which month the salary is paid for right now.
+     * Salaries are paid AFTER the month: on November 1 we pay for October. So if anyone
+     * is still unpaid for the previous month we pay for it, otherwise for the current one.
      */
     public YearMonth payPeriod(String company) {
         YearMonth prev = YearMonth.now().minusMonths(1);
@@ -96,7 +96,7 @@ public class PayrollService {
         return prevUnpaid ? prev : YearMonth.now();
     }
 
-    /** То же самое для одного сотрудника. */
+    /** The same for one employee. */
     public YearMonth payPeriod(User u) {
         YearMonth prev = YearMonth.now().minusMonths(1);
         EmployeeMonth e = monthFor(u, prev);
@@ -122,7 +122,7 @@ public class PayrollService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /** Зарплатный фонд по 4 неделям месяца (часы × ставка), в $k. */
+    /** Payroll per week of the month (hours × rate), in $k. */
     public List<Double> weeklyPayrollK(String company, YearMonth m) {
         BigDecimal[] w = {BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
         LocalDateTime from = m.atDay(1).atStartOfDay();
@@ -153,7 +153,7 @@ public class PayrollService {
         return Math.min((d.getDayOfMonth() - 1) / 7, 3);
     }
 
-    /** День зарплаты — последний день месяца. */
+    /** Payday is the last day of the month. */
     public static LocalDate payday(YearMonth m) {
         return m.atEndOfMonth();
     }

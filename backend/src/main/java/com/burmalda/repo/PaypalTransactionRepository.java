@@ -8,9 +8,9 @@ import java.util.List;
 
 public interface PaypalTransactionRepository extends JpaRepository<PaypalTransaction, String> {
 
-    /** Личный кошелёк сотрудника. */
+    /** An employee's own wallet. */
     List<PaypalTransaction> findByOwnerOrderByDateTimeDesc(User owner);
 
-    /** Счёт компании (owner == null). */
+    /** The company account (owner == null). */
     List<PaypalTransaction> findByCompanyAndOwnerIsNullOrderByDateTimeDesc(String company);
 }

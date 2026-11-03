@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
 
-/** Всё, что делает бухгалтер: зарплаты (Mass Pay), финансы, платежи, одобрения. */
+/** Everything the accountant does: payroll (Mass Pay), finance, payments, approvals. */
 @Service
 @Transactional
 public class AccountingService {
@@ -47,7 +47,7 @@ public class AccountingService {
         this.accounts = accounts;
     }
 
-    /* ======================= Tasks бухгалтера ======================= */
+    /* ======================= accountant Tasks page ======================= */
 
     @Transactional(readOnly = true)
     public Team team(User me) {
@@ -68,8 +68,8 @@ public class AccountingService {
     }
 
     /**
-     * Выплатить зарплату за текущий месяц выбранным сотрудникам одной пачкой PayPal Mass Pay.
-     * Уже оплаченные пропускаются, сумма считается на сервере (фронту не доверяем).
+     * Pay the selected employees for the pay period in one PayPal Mass Pay batch.
+     * Already paid ones are skipped; the amount is calculated on the server (the frontend is not trusted).
      */
     public PayResult pay(User me, List<Long> ids) {
         YearMonth m = payroll.payPeriod(me.getCompany());
@@ -160,7 +160,7 @@ public class AccountingService {
                 budgets.allocation(company, YearMonth.now()), months);
     }
 
-    /** Пополнить PayPal компании с банковского счёта. */
+    /** Top up the company's PayPal from the bank account. */
     public BigDecimal addFunds(User me, BigDecimal amount) {
         CompanyAccount acc = account(me.getCompany());
         BigDecimal a = Fmt.money(amount);
@@ -170,7 +170,7 @@ public class AccountingService {
         return acc.getBalance();
     }
 
-    /** Разовый платёж: to — email (уйдёт в PayPal) или просто имя получателя. */
+    /** One-off payment: to = an email (sent via PayPal) or just a payee name. */
     public BigDecimal sendPayment(User me, Requests.Payment r) {
         CompanyAccount acc = account(me.getCompany());
         BigDecimal a = Fmt.money(r.amount());
@@ -187,7 +187,7 @@ public class AccountingService {
         return acc.getBalance();
     }
 
-    /** Одобрить запланированный платёж: деньги уходят сразу, строка пропадает из Pending Approvals. */
+    /** Approve a scheduled payment: the money goes out at once and the row leaves Pending Approvals. */
     public BigDecimal approve(User me, Long id) {
         ScheduledPayment s = scheduled.findById(id)
                 .filter(x -> x.getCompany().equals(me.getCompany()))

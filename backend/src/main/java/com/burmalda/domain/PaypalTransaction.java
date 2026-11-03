@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Движение денег по PayPal.
- * owner == null  -> транзакция счёта компании (видит бухгалтер)
- * owner != null  -> транзакция личного кошелька сотрудника
+ * A PayPal money movement.
+ * owner == null  -> a company account transaction (seen by the accountant)
+ * owner != null  -> a transaction of an employee's own wallet
  */
 @Entity
 @Table(name = "paypal_transactions")
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class PaypalTransaction {
 
-    /** ID в стиле PayPal: 16 символов, например 8XK21094AB552140. */
+    /** PayPal-style id: 16 characters, e.g. 8XK21094AB552140. */
     @Id
     private String id;
 
@@ -55,6 +55,6 @@ public class PaypalTransaction {
     @Enumerated(EnumType.STRING)
     private TxCategory category;
 
-    /** Отдел, на который списываются расходы (для бюджета по отделам). */
+    /** Department the expense is charged to (for department budgets). */
     private String department;
 }

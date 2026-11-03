@@ -38,6 +38,6 @@ public class Task {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    /** Когда задачу закрыли — нужно для расчёта "сколько задач закрыто за месяц". */
+    /** When the task was closed — needed for "how many tasks were closed this month". */
     private LocalDateTime completedAt;
 }

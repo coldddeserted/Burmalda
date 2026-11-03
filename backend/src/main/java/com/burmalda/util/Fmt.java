@@ -8,7 +8,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-/** Форматы дат и денег ровно такие, как ждёт фронт. */
+/** Date and money formats exactly as the frontend expects. */
 public final class Fmt {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
@@ -27,12 +27,12 @@ public final class Fmt {
         return d == null ? "" : d.format(DATE);
     }
 
-    /** 2026-10-05 10:25 — для страницы Transactions */
+    /** 2026-10-05 10:25 — for the Transactions page */
     public static String tx(LocalDateTime t) {
         return t.format(TX);
     }
 
-    /** 05.10.2026, 10:25 AM — для дашборда бухгалтера */
+    /** 05.10.2026, 10:25 AM — for the accountant dashboard */
     public static String dashTx(LocalDateTime t) {
         return t.format(DASH_TX);
     }
@@ -42,7 +42,7 @@ public final class Fmt {
         return t.format(HM);
     }
 
-    /** Длительность в секундах -> "02:10" */
+    /** Duration in seconds -> "02:10" */
     public static String dur(long seconds) {
         return String.format("%02d:%02d", seconds / 3600, (seconds % 3600) / 60);
     }
@@ -62,7 +62,7 @@ public final class Fmt {
         return m.format(MONTH_YEAR);
     }
 
-    /** Деньги: 2 знака после запятой. */
+    /** Money: 2 decimal places. */
     public static BigDecimal money(BigDecimal v) {
         return v == null ? BigDecimal.ZERO.setScale(2) : v.setScale(2, RoundingMode.HALF_UP);
     }
@@ -71,7 +71,7 @@ public final class Fmt {
         return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP);
     }
 
-    /** В тысячах с одним знаком: 23500 -> 23.5 (графики на фронте рисуются в $k). */
+    /** In thousands with one decimal: 23500 -> 23.5 (frontend charts are in $k). */
     public static double thousands(BigDecimal v) {
         return v.divide(BigDecimal.valueOf(1000), 1, RoundingMode.HALF_UP).doubleValue();
     }
@@ -80,7 +80,7 @@ public final class Fmt {
         return Math.round(v * 10) / 10.0;
     }
 
-    /** Процент изменения: (cur - prev) / prev * 100, с одним знаком. */
+    /** Percent change: (cur - prev) / prev * 100, one decimal. */
     public static double deltaPct(BigDecimal cur, BigDecimal prev) {
         if (prev == null || prev.signum() == 0) return 0;
         return round1(cur.subtract(prev).doubleValue() / prev.doubleValue() * 100);

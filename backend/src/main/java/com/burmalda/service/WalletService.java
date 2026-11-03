@@ -62,14 +62,14 @@ public class WalletService {
                 months, history);
     }
 
-    /** Вывод с PayPal на банк. Сам PayPal API вывод на банк не даёт — фиксируем у себя. */
+    /** Withdraw from PayPal to a bank. The PayPal API has no such call, so it is only recorded here. */
     public BigDecimal withdraw(User me, BigDecimal amount) {
         BigDecimal a = Fmt.money(amount);
         if (a.compareTo(me.getWalletBalance()) > 0) {
             throw Errors.badRequest("Not enough funds: available $" + Fmt.money(me.getWalletBalance()));
         }
         me.setWalletBalance(me.getWalletBalance().subtract(a));
-        users.save(me); // me пришёл из контроллера (вне транзакции) — сохраняем явно
+        users.save(me); // me comes from the controller (outside the transaction) — save explicitly
         txs.save(AccountingService.tx(me.getCompany(), me, LocalDateTime.now(), "Withdrawal to bank",
                 "Bank account linked to PayPal", TxDirection.OUT, a, BigDecimal.ZERO, TxCategory.WITHDRAWAL,
                 me.getDepartment()));

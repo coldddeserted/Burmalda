@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Поиск из шапки: задачи, проекты, люди (людей ищет только бухгалтер). */
+/** Header search: tasks, projects, people (only the accountant can search people). */
 @Service
 @Transactional(readOnly = true)
 public class SearchService {

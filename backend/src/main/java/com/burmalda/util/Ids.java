@@ -2,7 +2,7 @@ package com.burmalda.util;
 
 import java.security.SecureRandom;
 
-/** Генерация ID в стиле PayPal: 16 символов [0-9A-Z]. */
+/** PayPal-style ids: 16 characters [0-9A-Z]. */
 public final class Ids {
 
     private static final String CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";

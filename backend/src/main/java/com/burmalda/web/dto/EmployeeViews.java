@@ -7,7 +7,7 @@ import com.burmalda.web.dto.CommonViews.PayoutRow;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Ответы для кабинета сотрудника. */
+/** Responses for the employee workspace. */
 public final class EmployeeViews {
 
     private EmployeeViews() {
@@ -31,7 +31,7 @@ public final class EmployeeViews {
     public record CountLabel(int count, String label) {
     }
 
-    /** value — 0..100 (высота столбика), type — light/mid/dark/hatched. */
+    /** value — 0..100 (bar height), type — light/mid/dark/hatched. */
     public record DayBar(String day, int value, String type, String tip) {
     }
 
@@ -39,7 +39,7 @@ public final class EmployeeViews {
     public record TeamMember(Long id, String name, String task, String status) {
     }
 
-    /** Проценты задач, в сумме 100. */
+    /** Task percentages, they add up to 100. */
     public record Progress(int completed, int inProgress, int pending) {
     }
 

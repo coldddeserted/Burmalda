@@ -41,6 +41,6 @@ public class Project {
     @Column(precision = 12, scale = 2)
     private BigDecimal budget = BigDecimal.ZERO;
 
-    /** Комментарий для проектов "на обсуждении". */
+    /** A note for projects "on discuss". */
     private String note;
 }

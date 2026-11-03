@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/** Бизнес-счёт PayPal компании. */
+/** The company's PayPal business account. */
 @Entity
 @Getter
 @Setter

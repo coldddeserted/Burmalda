@@ -34,15 +34,15 @@ public class User {
 
     private String department;
 
-    /** Все данные изолированы по компании: бухгалтер видит только своих сотрудников. */
+    /** All data is isolated per company: an accountant sees only their own employees. */
     @Column(nullable = false)
     private String company;
 
-    /** Ставка в час — из неё + отработанных часов считается зарплата. */
+    /** Hourly rate — the salary is calculated from it and the tracked hours. */
     @Column(precision = 12, scale = 2)
     private BigDecimal hourlyRate = BigDecimal.ZERO;
 
-    /** Баланс сотрудника на PayPal (куда падают выплаты). */
+    /** The employee's PayPal balance (where payouts arrive). */
     @Column(precision = 12, scale = 2)
     private BigDecimal walletBalance = BigDecimal.ZERO;
 

@@ -42,7 +42,7 @@ public class AuthController {
         return Ok.OK;
     }
 
-    /** Кто я — удобно проверять токен. */
+    /** Who am I — handy to check a token. */
     @GetMapping("/me")
     public UserDto me(@AuthenticationPrincipal AuthUser me) {
         return UserDto.from(users.require(me));

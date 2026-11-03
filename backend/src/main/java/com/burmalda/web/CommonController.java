@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Общие для обеих ролей: AI, транзакции PayPal, отчёты, поиск. */
+/** Shared by both roles: AI, PayPal transactions, reports, search. */
 @RestController
 @RequestMapping("/api")
 public class CommonController {
@@ -30,7 +30,7 @@ public class CommonController {
         this.search = search;
     }
 
-    /* ---------- AI Burmalda (параметр role фронт шлёт, но роль берём из токена) ---------- */
+    /* ---------- AI Burmalda (the frontend sends a role parameter, but the role comes from the token) ---------- */
 
     @PostMapping("/ai/chat")
     public ChatReply chat(@AuthenticationPrincipal AuthUser me, @Valid @RequestBody Requests.Chat body) {

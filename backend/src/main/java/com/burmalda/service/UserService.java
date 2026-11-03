@@ -15,7 +15,7 @@ public class UserService {
         this.users = users;
     }
 
-    /** Текущий пользователь из БД по токену. */
+    /** The current user from the database, by token. */
     public User require(AuthUser me) {
         if (me == null) throw Errors.unauthorized("Please log in");
         return users.findById(me.id()).orElseThrow(() -> Errors.unauthorized("User not found"));

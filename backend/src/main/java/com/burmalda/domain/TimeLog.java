@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/** Отрезок отработанного времени (из трекера на дашборде сотрудника). */
+/** A piece of tracked time (from the timer on the employee dashboard). */
 @Entity
 @Getter
 @Setter
@@ -26,7 +26,7 @@ public class TimeLog {
 
     private long seconds;
 
-    /** Над чем работал (название проекта). */
+    /** What the person worked on (project name). */
     private String label;
 
     public TimeLog(User user, LocalDateTime startedAt, long seconds, String label) {

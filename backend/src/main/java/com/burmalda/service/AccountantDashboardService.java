@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** GET /api/dashboard/accountant — финансовая картина компании. */
+/** GET /api/dashboard/accountant — the company's financial picture. */
 @Service
 @Transactional(readOnly = true)
 public class AccountantDashboardService {
@@ -86,7 +86,7 @@ public class AccountantDashboardService {
                 .toList();
     }
 
-    /** Чек-лист документов: профили сотрудников (верифицирован ли PayPal) + пункты из БД. */
+    /** Document checklist: employee profiles (PayPal verified or not) + items from the database. */
     public List<DocRow> docs(String company) {
         List<User> emps = payroll.employees(company);
         long verified = emps.stream().filter(User::isPaypalVerified).count();
@@ -105,7 +105,7 @@ public class AccountantDashboardService {
         return new Compliance(percent, items);
     }
 
-    /** Три суммы под "Available Budget": остаток двух самых крупных отделов и всех остальных. */
+    /** Three amounts under "Available Budget": what is left for the two biggest departments and for all the others. */
     private static List<BigDecimal> splits(List<AllocRow> alloc) {
         List<BigDecimal> left = alloc.stream()
                 .map(a -> a.allocated().subtract(a.spent()).max(BigDecimal.ZERO))
@@ -117,8 +117,8 @@ public class AccountantDashboardService {
     }
 
     /**
-     * Денежный поток за 10 недель (в $k) + прогноз.
-     * Прогноз — скользящее среднее притока за 3 предыдущие недели (простая, но честная модель).
+     * Cash flow for 10 weeks (in $k) + forecast.
+     * Forecast = moving average of the inflow over the previous 3 weeks (simple but honest).
      */
     public CashFlow cashFlow(List<PaypalTransaction> companyTx, YearMonth month) {
         LocalDate thisMonday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -158,8 +158,8 @@ public class AccountantDashboardService {
     }
 
     /**
-     * Экономия: Mass Pay вместо поштучных выплат (2% - 1% от суммы пачки)
-     * и маршрутизация валютных переводов (условно 1% от суммы).
+     * Savings: Mass Pay instead of single payouts (2% - 1% of the batch total)
+     * and FX routing of cross-border transfers (assumed 1% of the amount).
      */
     public List<SavingRow> savings(List<PaypalTransaction> companyTx, YearMonth month) {
         BigDecimal massPay = BigDecimal.ZERO, fx = BigDecimal.ZERO;

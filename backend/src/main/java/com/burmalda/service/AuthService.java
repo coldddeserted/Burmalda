@@ -52,7 +52,7 @@ public class AuthService {
         if (u.getRole() == Role.EMPLOYEE) u.setHourlyRate(DEFAULT_RATE);
         users.save(u);
 
-        // У компании должен быть счёт — создаём при первом бухгалтере/сотруднике
+        // The company needs an account — create it with its first user
         if (accounts.findByCompany(u.getCompany()).isEmpty()) {
             CompanyAccount acc = new CompanyAccount(u.getCompany());
             acc.setBankLabel("Bank account not linked");

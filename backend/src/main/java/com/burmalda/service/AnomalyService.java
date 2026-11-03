@@ -18,9 +18,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * "AI Risk Alerts": ищем подозрительные исходящие платежи компании.
- *  1) Дубликат: тот же получатель и та же сумма в пределах 3 дней.
- *  2) Необычная сумма: платёж больше чем в 2 раза выше среднего по этому получателю (нужно ≥2 прошлых платежа).
+ * "AI Risk Alerts": find suspicious outgoing company payments.
+ *  1) Duplicate: same payee and same amount within 3 days.
+ *  2) Unusual amount: a payment 2x above this payee's average (needs ≥2 past payments).
  */
 @Service
 @Transactional(readOnly = true)
@@ -43,7 +43,7 @@ public class AnomalyService {
         List<AnomalyRow> res = new ArrayList<>();
         Set<String> flagged = new HashSet<>();
 
-        // 1) дубликаты
+        // 1) duplicates
         for (int i = 0; i < all.size(); i++) {
             PaypalTransaction a = all.get(i);
             if (a.getDateTime().isBefore(since)) continue;
@@ -59,7 +59,7 @@ public class AnomalyService {
             }
         }
 
-        // 2) необычная сумма
+        // 2) unusual amount
         for (PaypalTransaction t : all) {
             if (t.getDateTime().isBefore(since) || flagged.contains(t.getId())) continue;
             List<BigDecimal> others = all.stream()

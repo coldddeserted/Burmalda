@@ -6,8 +6,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * CORS — нужен, только если фронт открыт с другого адреса (например, IDEA localhost:63342).
- * Если фронт раздаёт сам Spring (http://localhost:8080) — CORS вообще не участвует.
+ * CORS is needed only when the frontend is opened from another origin (e.g. IDEA localhost:63342).
+ * When Spring itself serves the frontend (http://localhost:8080), CORS is not involved at all.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {

@@ -20,8 +20,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Минимальный JWT (HS256) без сторонних библиотек — чтобы было видно, как он устроен:
- * base64url(header) + "." + base64url(payload) + "." + base64url(HMAC-SHA256(подписи)).
+ * Minimal JWT (HS256) without third-party libraries — to show how it works:
+ * base64url(header) + "." + base64url(payload) + "." + base64url(HMAC-SHA256(signature)).
  */
 @Service
 public class JwtService {
@@ -35,7 +35,7 @@ public class JwtService {
     private final long ttlSeconds;
     private final ObjectMapper mapper;
 
-    /** Токены, отозванные через /auth/logout: tokenId -> когда истекает. */
+    /** Tokens revoked via /auth/logout: tokenId -> when it expires. */
     private final Map<String, Long> revoked = new ConcurrentHashMap<>();
 
     public JwtService(@Value("${app.jwt.secret}") String secret,
@@ -67,7 +67,7 @@ public class JwtService {
         }
     }
 
-    /** Пусто, если токен битый, просрочен или отозван. */
+    /** Empty if the token is broken, expired or revoked. */
     public Optional<AuthUser> verify(String token) {
         try {
             String[] parts = token.split("\\.");
@@ -97,7 +97,7 @@ public class JwtService {
     public void revoke(AuthUser user) {
         long now = Instant.now().getEpochSecond();
         revoked.put(user.tokenId(), now + ttlSeconds);
-        revoked.values().removeIf(until -> until < now); // чистим старое, чтобы мапа не росла
+        revoked.values().removeIf(until -> until < now); // drop old entries so the map does not grow
     }
 
     private byte[] sign(String data) throws Exception {

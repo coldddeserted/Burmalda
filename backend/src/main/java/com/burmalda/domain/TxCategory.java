@@ -1,6 +1,6 @@
 package com.burmalda.domain;
 
-/** Категория транзакции + бейдж и цвет для списка на дашборде бухгалтера. */
+/** Transaction category + badge and color for the list on the accountant dashboard. */
 public enum TxCategory {
     PAYROLL("PR", "#5b7aa8"),
     VENDOR("VN", "#7a4f8f"),

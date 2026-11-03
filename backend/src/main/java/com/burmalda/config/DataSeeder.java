@@ -18,13 +18,13 @@ import java.time.*;
 import java.util.*;
 
 /**
- * Демо-данные при первом запуске (если в БД нет пользователей).
- * Все даты считаются от "сегодня", поэтому дашборды всегда выглядят живыми.
- * Отключить: app.seed.enabled=false. Пересоздать: удалить папку ./data и перезапустить.
+ * Demo data on the first start (when the database has no users).
+ * All dates are relative to "today", so the dashboards always look alive.
+ * Disable: app.seed.enabled=false. Recreate: delete the ./data folder and restart.
  *
- * Логины (пароль у всех demo1234):
- *   accountant@burmalda.com — бухгалтер
- *   engineer@burmalda.com   — сотрудник (Edgar Wilson)
+ * Logins (password demo1234 for all):
+ *   accountant@burmalda.com — accountant
+ *   engineer@burmalda.com   — employee (Edgar Wilson)
  */
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -82,9 +82,9 @@ public class DataSeeder implements CommandLineRunner {
         if (!enabled || users.count() > 0) return;
         log.info("Seeding demo data for company '{}'...", COMPANY);
 
-        String hash = encoder.encode(PASSWORD); // bcrypt медленный — считаем один раз
+        String hash = encoder.encode(PASSWORD); // bcrypt is slow — hash once
 
-        /* ---------- люди ---------- */
+        /* ---------- people ---------- */
         User anna = user("Anna Kowalska", "accountant@burmalda.com", Role.ACCOUNTANT, "Finance", "0", hash);
         User edgar = user("Edgar Wilson", "engineer@burmalda.com", Role.EMPLOYEE, "Engineering", "20", hash);
         User leon = user("Leon Isa", "leon@burmalda.com", Role.EMPLOYEE, "Engineering", "25", hash);
@@ -97,7 +97,7 @@ public class DataSeeder implements CommandLineRunner {
         tomasz.setPaypalVerified(false); // для Compliance: один профиль не подтверждён
         List<User> employees = List.of(edgar, leon, alex, jack, maria, tomasz, sofia, daniel);
 
-        /* ---------- проекты ---------- */
+        /* ---------- projects ---------- */
         LocalDate m1 = month.atDay(1);
         LocalDate prevEnd = month.minusMonths(1).atEndOfMonth();
         Project billing = ended("Billing API v2", alex, clampToMonth(today.minusDays(4)), 18000);
@@ -123,8 +123,8 @@ public class DataSeeder implements CommandLineRunner {
         Project partnerApi = discuss("Partner API integration", "Waiting for scope from the client");
         Project dwh = discuss("Data warehouse migration", "Budget approval pending");
 
-        /* ---------- задачи ---------- */
-        // Edgar (демо-сотрудник) — чтобы его доска была разнообразной
+        /* ---------- tasks ---------- */
+        // Edgar (demo employee) — a varied task board
         task("Develop Search and Filter Functionality", search, edgar, 3, Priority.HIGH, TaskStatus.TODO);
         task("Filter chips UI", search, edgar, 6, Priority.MID, TaskStatus.PROGRESS);
         task("Search API pagination", search, edgar, -2, Priority.MID, TaskStatus.DONE);
@@ -141,7 +141,7 @@ public class DataSeeder implements CommandLineRunner {
         doneTask("Billing API: webhooks", billing, edgar);
         doneTask("Landing hero section", landing, edgar);
 
-        // остальная команда
+        // the rest of the team
         task("Header and nav breakpoints", layout, leon, 4, Priority.HIGH, TaskStatus.PROGRESS);
         task("Image lazy loading", layout, leon, -3, Priority.MID, TaskStatus.DONE);
         doneTask("Portal: invoices page", portal, leon);
@@ -173,7 +173,7 @@ public class DataSeeder implements CommandLineRunner {
         task("Notification preferences", notify, daniel, 11, Priority.LOW, TaskStatus.TODO);
         task("Office equipment inventory", notify, daniel, -2, Priority.LOW, TaskStatus.DONE);
 
-        // прогресс running-проектов из задач
+        // progress of running projects from their tasks
         for (Project p : projects.findAll()) {
             List<Task> list = tasks.findByProject(p);
             if (p.getStatus() == ProjectStatus.RUNNING && !list.isEmpty()) {
@@ -182,7 +182,7 @@ public class DataSeeder implements CommandLineRunner {
             }
         }
 
-        /* ---------- трекер времени за ~полгода ---------- */
+        /* ---------- time tracker for ~6 months ---------- */
         Map<User, List<Project>> workOn = new LinkedHashMap<>();
         for (User u : employees) {
             Set<Project> ps = new LinkedHashSet<>();
@@ -197,13 +197,13 @@ public class DataSeeder implements CommandLineRunner {
             for (LocalDate d = start; !d.isAfter(today); d = d.plusDays(1)) {
                 DayOfWeek w = d.getDayOfWeek();
                 if (w == DayOfWeek.SATURDAY || w == DayOfWeek.SUNDAY) continue;
-                if (rnd.nextInt(100) < 4) continue; // иногда выходной / больничный
+                if (rnd.nextInt(100) < 4) continue; // a day off / sick day now and then
                 logs.addAll(day(u, d, workOn.get(u)));
             }
         }
         timeLogs.saveAll(logs);
 
-        /* ---------- кошелёк компании, бюджеты, документы ---------- */
+        /* ---------- company wallet, budgets, documents ---------- */
         CompanyAccount acc = new CompanyAccount(COMPANY);
         acc.setBalance(new BigDecimal("84250.00"));
         acc.setBankLabel("Bank account ending 4417");
@@ -221,7 +221,7 @@ public class DataSeeder implements CommandLineRunner {
         compliance.save(new ComplianceItem(COMPANY, "PayPal business verification", "Verified", true));
         compliance.save(new ComplianceItem(COMPANY, "Contractor tax forms", "3 missing", false));
 
-        /* ---------- зарплаты прошлых месяцев (посчитаны тем же PayrollService) ---------- */
+        /* ---------- salaries of past months (calculated by the same PayrollService) ---------- */
         for (int i = HISTORY_MONTHS; i >= 1; i--) {
             YearMonth ym = month.minusMonths(i);
             LocalDateTime payAt = ym.plusMonths(1).atDay(1).atTime(9, 0);
@@ -236,23 +236,23 @@ public class DataSeeder implements CommandLineRunner {
                     TxDirection.OUT, total, total.multiply(PayrollService.MASS_PAY_FEE_RATE), TxCategory.PAYROLL, null,
                     TxStatus.COMPLETED);
         }
-        // Jack уже получил за текущий месяц (как в макете: "Jack Lui is already paid")
+        // Jack is already paid for the current month (as in the mockup: "Jack Lui is already paid")
         BigDecimal jackNow = payroll.monthFor(jack, month).salary();
         payout(jack, jackNow, Fmt.monthLong(month) + " salary", today, month, "SIM-ADVANCE");
         companyTx(now.minusHours(2), "Mass Pay: 1 recipients", "Payroll " + Fmt.monthYear(month) + " (advance)",
                 TxDirection.OUT, jackNow, jackNow.multiply(PayrollService.MASS_PAY_FEE_RATE), TxCategory.PAYROLL,
                 null, TxStatus.COMPLETED);
-        // бонус Эдгару за прошлый квартал
+        // Edgar's bonus for the last quarter
         payout(edgar, new BigDecimal("800.00"), "Bonus: Q" + prevQuarter + " milestone",
                 month.minusMonths(1).atDay(15), null, "SIM-BONUS");
 
-        // вывод на банк: каждый месяц ~60% зарплаты уходит на банк
+        // withdrawals: ~60% of every salary goes to the bank
         for (User u : employees) {
             for (int i = HISTORY_MONTHS; i >= 1; i--) {
                 YearMonth ym = month.minusMonths(i).plusMonths(1);
                 LocalDateTime at = ym.atDay(Math.min(20, ym.lengthOfMonth())).atTime(12, 40);
                 if (at.isAfter(now)) continue;
-                // ~60% зарплаты, пришедшей 1-го числа, округлено вниз до сотни
+                // ~60% of the salary paid on the 1st, rounded down to hundreds
                 BigDecimal salary = payroll.monthFor(u, ym.minusMonths(1)).salary();
                 BigDecimal amount = salary.multiply(new BigDecimal("0.6"))
                         .divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.DOWN).multiply(BigDecimal.valueOf(100));
@@ -268,7 +268,7 @@ public class DataSeeder implements CommandLineRunner {
         personalTx(edgar, month.minusMonths(3).atDay(5).atTime(11, 30), "Withdrawal to bank", "Rejected by bank",
                 TxDirection.OUT, new BigDecimal("1000.00"), TxCategory.WITHDRAWAL, TxStatus.FAILED);
 
-        /* ---------- расходы и доходы компании ---------- */
+        /* ---------- company expenses and income ---------- */
         for (int i = HISTORY_MONTHS; i >= 0; i--) {
             YearMonth ym = month.minusMonths(i);
             companyTx(at(ym, 1, 9, 0), "Funding from bank", "Bank account ending 4417", TxDirection.IN,
@@ -294,30 +294,30 @@ public class DataSeeder implements CommandLineRunner {
                         new BigDecimal("6100"), BigDecimal.ZERO, TxCategory.TAX, null, TxStatus.COMPLETED);
             }
         }
-        // подрядчик в Лиссабоне: обычно ~1000, а последний перевод в 2.4 раза больше -> AI Risk Alert
+        // Lisbon contractor: usually ~1000, the last transfer is 2.4x bigger -> AI Risk Alert
         companyTx(month.minusMonths(3).atDay(3).atTime(8, 30), "Lisbon contractor", "Cross-border transfer, EUR",
                 TxDirection.OUT, new BigDecimal("1000"), new BigDecimal("15"), TxCategory.TRANSFER, "Marketing", TxStatus.COMPLETED);
         companyTx(month.minusMonths(2).atDay(3).atTime(8, 30), "Lisbon contractor", "Cross-border transfer, EUR",
                 TxDirection.OUT, new BigDecimal("1100"), new BigDecimal("16.50"), TxCategory.TRANSFER, "Marketing", TxStatus.COMPLETED);
         companyTx(now.minusDays(3).withHour(8).withMinute(30), "Lisbon contractor", "Cross-border transfer, EUR",
                 TxDirection.OUT, new BigDecimal("2500"), new BigDecimal("37.50"), TxCategory.TRANSFER, "Marketing", TxStatus.COMPLETED);
-        // дубль Slack на следующий день после последнего списания -> AI Risk Alert
+        // duplicate Slack charge the day after the last one -> AI Risk Alert
         LocalDate lastSlack = today.getDayOfMonth() >= 5 ? month.atDay(4) : month.minusMonths(1).atDay(4);
         companyTx(lastSlack.plusDays(1).atTime(9, 10), "Slack Technologies", "Vendor, monthly plan", TxDirection.OUT,
                 new BigDecimal("1200"), BigDecimal.ZERO, TxCategory.VENDOR, "Engineering", TxStatus.COMPLETED);
         companyTx(month.minusMonths(1).atDay(22).atTime(13, 20), "Notion", "Vendor, card declined", TxDirection.OUT,
                 new BigDecimal("360"), BigDecimal.ZERO, TxCategory.VENDOR, "Operations", TxStatus.FAILED);
 
-        /* ---------- ждут одобрения / запланированы ---------- */
+        /* ---------- waiting for approval / scheduled ---------- */
         sched("Mass Pay: Marketing bonuses", "6800", month.atEndOfMonth(), "Payroll", "Sofia Rossi", false);
         sched("Expense: Server Hosting (next month)", "4350", today.plusDays(2), "Expense", "Leon Isa", false);
         sched("Cross-Border Transfer: Lisbon contractor", "2500", today.plusDays(1), "Transfer", "Maria Santos", false);
         sched("Vendor: Notion + Linear", "1020", today.plusDays(4), "Vendor", "Daniel Park", false);
-        YearMonth nextQuarter = month.plusMonths(3 - (month.getMonthValue() - 1) % 3); // 1-е число след. квартала
+        YearMonth nextQuarter = month.plusMonths(3 - (month.getMonthValue() - 1) % 3); // 1st day of the next quarter
         sched("Quarterly tax withholding", "6100", nextQuarter.atDay(15), "Tax", "Anna Kowalska", true);
         sched("Slack Technologies", "1200", month.plusMonths(1).atDay(4), "Vendor", "Leon Isa", true);
 
-        /* ---------- немного истории AI-чата ---------- */
+        /* ---------- some AI chat history ---------- */
         chat(anna, "Payroll run for " + Fmt.monthLong(month.minusMonths(1)));
         chat(anna, "Anomalies in vendor payments");
         chat(anna, "Q" + prevQuarter + " tax withholding check");
@@ -379,7 +379,7 @@ public class DataSeeder implements CommandLineRunner {
         return projects.save(p);
     }
 
-    /** dueInDays — срок относительно сегодня (минус = в прошлом). DONE-задачи закрыты за день до срока. */
+    /** dueInDays — due date relative to today (negative = in the past). DONE tasks are closed a day before the due date. */
     private void task(String title, Project p, User who, int dueInDays, Priority prio, TaskStatus status) {
         Task t = new Task();
         t.setTitle(title);
@@ -396,7 +396,7 @@ public class DataSeeder implements CommandLineRunner {
         tasks.save(t);
     }
 
-    /** Задача закрытого проекта: закрыта за пару дней до конца проекта. */
+    /** A task of an ended project: closed a couple of days before the project ended. */
     private void doneTask(String title, Project p, User who) {
         Task t = new Task();
         t.setTitle(title);
@@ -412,7 +412,7 @@ public class DataSeeder implements CommandLineRunner {
         tasks.save(t);
     }
 
-    /** Рабочий день: 6.5–9.5 часов, 2–3 сессии по проектам, над которыми человек работал в эту дату. */
+    /** A working day: 6.5–9.5 hours, 2–3 sessions on the projects the person was working on that day. */
     private List<TimeLog> day(User u, LocalDate d, List<Project> candidates) {
         List<Project> active = new ArrayList<>();
         for (Project p : candidates) {
@@ -435,7 +435,7 @@ public class DataSeeder implements CommandLineRunner {
             len = Math.max(600, Math.min(len, totalSec));
             String label = active.isEmpty() ? fallback : active.get(rnd.nextInt(active.size())).getName();
             res.add(new TimeLog(u, cursor, len, label));
-            cursor = cursor.plusSeconds(len + 20 * 60L); // перерыв 20 минут
+            cursor = cursor.plusSeconds(len + 20 * 60L); // 20 minute break
             totalSec -= len;
             if (d.equals(today) && cursor.isAfter(now)) break;
         }
@@ -466,7 +466,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private void companyTx(LocalDateTime at, String name, String note, TxDirection dir, BigDecimal amount,
                            BigDecimal fee, TxCategory cat, String dept, TxStatus status) {
-        if (at.isAfter(now)) return; // будущее не пишем
+        if (at.isAfter(now)) return; // never write the future
         txs.save(tx(at, name, note, dir, amount, fee, cat, dept, status));
     }
 
@@ -512,7 +512,7 @@ public class DataSeeder implements CommandLineRunner {
         return ym.atDay(Math.min(day, ym.lengthOfMonth())).atTime(h, min);
     }
 
-    /** Чтобы "закрыто в этом месяце" не уехало в прошлый месяц в первых числах. */
+    /** So that "ended this month" does not slip into the previous month on the first days of a month. */
     private LocalDate clampToMonth(LocalDate d) {
         LocalDate first = month.atDay(1);
         return d.isBefore(first) ? first : d;

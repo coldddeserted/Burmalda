@@ -6,7 +6,7 @@ import com.burmalda.web.dto.CommonViews.MonthValue;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Ответы для кабинета бухгалтера. Графики фронт рисует в тысячах долларов ($k). */
+/** Responses for the accountant workspace. Frontend charts are in thousands of dollars ($k). */
 public final class AccountantViews {
 
     private AccountantViews() {
@@ -25,12 +25,12 @@ public final class AccountantViews {
             Details details) {
     }
 
-    /** weekly — зарплатный фонд по неделям месяца в $k. */
+    /** weekly — payroll per week of the month in $k. */
     public record Payroll(BigDecimal balance, String currency, double deltaPct,
                           BigDecimal prevMonth, String prevLabel, List<Double> weekly) {
     }
 
-    /** splits — три суммы под карточкой "Available Budget". */
+    /** splits — three amounts under the "Available Budget" card. */
     public record Budget(BigDecimal amount, String currency, List<BigDecimal> splits) {
     }
 
@@ -40,7 +40,7 @@ public final class AccountantViews {
     public record Compliance(int percent, List<String> items) {
     }
 
-    /** inflow/outflow/forecast — 10 недель в $k; bars — 4 недели текущего месяца в $k. */
+    /** inflow/outflow/forecast — 10 weeks in $k; bars — 4 weeks of the current month in $k. */
     public record CashFlow(List<Double> inflow, List<Double> outflow, List<Double> forecast, List<InOut> bars) {
     }
 
@@ -54,7 +54,7 @@ public final class AccountantViews {
     public record DeptAmount(String name, BigDecimal amount) {
     }
 
-    /** weeks — высота столбиков 0..100 */
+    /** weeks — bar heights 0..100 */
     public record Savings(BigDecimal total, double deltaPct, List<Integer> weeks) {
     }
 
@@ -81,7 +81,7 @@ public final class AccountantViews {
     public record SavingRow(String label, BigDecimal amount) {
     }
 
-    /* ---------- Tasks бухгалтера: кто сколько наработал ---------- */
+    /* ---------- accountant Tasks: who worked how much ---------- */
 
     public record Team(String period, List<EmployeePay> employees, List<EndedProject> projects) {
     }

@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <!-- свежий Lombok: поддерживает JDK 21..25 -->
+        <!-- recent Lombok: supports JDK 21..25 -->
         <lombok.version>1.18.40</lombok.version>
     </properties>
 
@@ -29,7 +29,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <!-- БД через JPA/Hibernate -->
+        <!-- database via JPA/Hibernate -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -39,33 +39,33 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-        <!-- Логин, роли, позже JWT -->
+        <!-- login, roles, JWT -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- H2 — локальная БД в файле, ничего ставить не надо -->
+        <!-- H2 — local file database, nothing to install -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- PostgreSQL — для прода (профиль prod) -->
+        <!-- PostgreSQL — for production (prod profile) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Геттеры/сеттеры/конструкторы аннотациями -->
+        <!-- getters/setters/constructors via annotations -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Автоперезапуск при изменениях в IDEA -->
+        <!-- auto-restart on changes in IDEA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>

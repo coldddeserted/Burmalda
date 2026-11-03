@@ -5,7 +5,7 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Тела входящих запросов. Валидация через @Valid в контроллерах. */
+/** Request bodies. Validated with @Valid in the controllers. */
 public final class Requests {
 
     private Requests() {
@@ -31,7 +31,7 @@ public final class Requests {
     public record TaskStatus(@NotBlank String status) {
     }
 
-    /** seconds — сколько всего натикало в трекере за сегодня. */
+    /** seconds — the tracker's total for today. */
     public record TimeLog(@PositiveOrZero long seconds, String label) {
     }
 

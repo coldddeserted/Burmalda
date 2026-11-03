@@ -21,11 +21,11 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * PayPal Payouts API (он же Mass Pay): одним запросом платим многим людям.
+ * PayPal Payouts API (a.k.a. Mass Pay): pay many people with one request.
  * Docs: https://developer.paypal.com/docs/api/payments.payouts-batch/v1/
  *
- * Если PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET не заданы — работаем в режиме симуляции:
- * деньги двигаются только в нашей БД, batchId начинается с "SIM-".
+ * Without PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET it runs in simulation mode:
+ * money moves only in our database, batchId starts with "SIM-".
  */
 @Service
 public class PaypalClient {
