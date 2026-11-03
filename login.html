@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -27,11 +27,11 @@
     <button class="icon-btn auth-theme" id="themeBtn" aria-label="Toggle theme"></button>
     <div class="auth-box">
       <h1 id="title">Welcome back</h1>
-      <p class="sub" id="subtitle">Войдите в свой аккаунт</p>
+      <p class="sub" id="subtitle">Sign in to your account</p>
 
       <div class="tabs" role="tablist">
-        <button class="on" data-tab="login" role="tab">Вход</button>
-        <button data-tab="register" role="tab">Регистрация</button>
+        <button class="on" data-tab="login" role="tab">Sign in</button>
+        <button data-tab="register" role="tab">Sign up</button>
       </div>
 
       <div class="auth-msg" id="msg" role="alert"></div>
@@ -39,37 +39,37 @@
       <!-- ВХОД -->
       <form id="loginForm" novalidate>
         <div class="field"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="email" placeholder="you@company.com" required></div>
-        <div class="field"><label for="lPass">Пароль</label><input id="lPass" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
-        <button class="btn" type="submit" id="loginBtn">Войти</button>
+        <div class="field"><label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+        <button class="btn" type="submit" id="loginBtn">Sign in</button>
         <div class="demo">
-          Демо-аккаунты (нажмите, чтобы подставить):<br>
-          Сотрудник: <code data-fill="engineer@burmalda.com">engineer@burmalda.com</code><br>
-          Бухгалтер: <code data-fill="accountant@burmalda.com">accountant@burmalda.com</code><br>
-          Пароль: <b>demo1234</b>
+          Demo accounts (click to fill in):<br>
+          Employee: <code data-fill="engineer@burmalda.com">engineer@burmalda.com</code><br>
+          Accountant: <code data-fill="accountant@burmalda.com">accountant@burmalda.com</code><br>
+          Password: <b>demo1234</b>
         </div>
       </form>
 
       <!-- РЕГИСТРАЦИЯ -->
       <form id="regForm" novalidate hidden>
         <div class="role-pick" id="rolePick">
-          <button type="button" class="on" data-role="employee"><b>Сотрудник</b><span>Инженер, дизайнер и др.</span></button>
-          <button type="button" data-role="accountant"><b>Бухгалтер</b><span>Финансы и выплаты</span></button>
+          <button type="button" class="on" data-role="employee"><b>Employee</b><span>Engineer, designer, etc.</span></button>
+          <button type="button" data-role="accountant"><b>Accountant</b><span>Finance and payouts</span></button>
         </div>
-        <div class="field"><label for="rName">Имя и фамилия</label><input id="rName" autocomplete="name" placeholder="Edgar Wilson" required></div>
+        <div class="field"><label for="rName">Full name</label><input id="rName" autocomplete="name" placeholder="Edgar Wilson" required></div>
         <div class="field"><label for="rEmail">Email</label><input id="rEmail" type="email" autocomplete="email" placeholder="you@company.com" required></div>
         <div class="two">
-          <div class="field"><label for="rCompany">Компания</label><input id="rCompany" placeholder="Burmalda" required></div>
-          <div class="field" id="deptField"><label for="rDept">Отдел</label>
+          <div class="field"><label for="rCompany">Company</label><input id="rCompany" placeholder="Burmalda" required></div>
+          <div class="field" id="deptField"><label for="rDept">Department</label>
             <select id="rDept">
               <option>Engineering</option><option>Marketing</option><option>Sales</option><option>Design</option><option>Operations</option>
             </select>
           </div>
         </div>
         <div class="two">
-          <div class="field"><label for="rPass">Пароль</label><input id="rPass" type="password" autocomplete="new-password" placeholder="мин. 8 символов" required></div>
-          <div class="field"><label for="rPass2">Повторите пароль</label><input id="rPass2" type="password" autocomplete="new-password" placeholder="••••••••" required></div>
+          <div class="field"><label for="rPass">Password</label><input id="rPass" type="password" autocomplete="new-password" placeholder="min. 8 characters" required></div>
+          <div class="field"><label for="rPass2">Repeat password</label><input id="rPass2" type="password" autocomplete="new-password" placeholder="••••••••" required></div>
         </div>
-        <button class="btn" type="submit" id="regBtn">Создать аккаунт</button>
+        <button class="btn" type="submit" id="regBtn">Create account</button>
       </form>
     </div>
   </section>
