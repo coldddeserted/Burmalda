@@ -1,5 +1,6 @@
 package com.burmalda.web.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -47,6 +48,14 @@ public final class Requests {
     public record Report(String format, String period) {
     }
 
-    public record Chat(@NotBlank @Size(max = 2000) String message, String role) {
+    /** message may be empty when files are attached. */
+    public record Chat(@Size(max = 2000) String message, String role,
+                       @Size(max = 3, message = "at most 3 files") List<@Valid Attachment> attachments) {
+    }
+
+    /** A photo or file attached in the AI chat. data = base64 without the "data:...;base64," prefix. */
+    public record Attachment(@NotBlank @Size(max = 200) String name,
+                             @NotBlank String type,
+                             @NotBlank @Size(max = 7_000_000, message = "file is too large (max 5 MB)") String data) {
     }
 }

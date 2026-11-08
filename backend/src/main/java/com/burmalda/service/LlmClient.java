@@ -76,6 +76,19 @@ public class LlmClient {
     public record Tool(String name, String description, Map<String, Object> parameters) {
     }
 
+    /** A photo or file from the chat. mediaType: image/png, application/pdf, text/csv...; data: base64. */
+    public record Attachment(String name, String mediaType, String data) {
+        public boolean isText() {
+            return mediaType.startsWith("text/");
+        }
+
+        /** Text files go to the model as text (both APIs read them fine that way). Long files are cut. */
+        public String text() {
+            String s = new String(java.util.Base64.getDecoder().decode(data), java.nio.charset.StandardCharsets.UTF_8);
+            return s.length() > 30_000 ? s.substring(0, 30_000) + "\n[... file truncated ...]" : s;
+        }
+    }
+
     /** One previous message of the chat. role: "user" or "model". */
     public record Turn(String role, String text) {
     }
@@ -105,13 +118,14 @@ public class LlmClient {
     }
 
     public Optional<AgentResult> runAgent(String system, List<Turn> history, String userMessage,
-                                          List<Tool> tools, ToolRunner runner, int maxSteps) {
-        if (claude.enabled()) return claude.runAgent(system, history, userMessage, tools, runner, maxSteps);
+                                          List<Attachment> files, List<Tool> tools, ToolRunner runner,
+                                          int maxSteps) {
+        if (claude.enabled()) return claude.runAgent(system, history, userMessage, files, tools, runner, maxSteps);
         if (apiKey.isBlank()) return Optional.empty();
         try {
             ArrayNode contents = mapper.createArrayNode();
             for (Turn t : history) contents.add(textContent(t.role(), t.text()));
-            contents.add(textContent("user", userMessage));
+            contents.add(userContent(userMessage, files));
 
             ObjectNode body = mapper.createObjectNode();
             body.set("systemInstruction", mapper.createObjectNode()
@@ -309,6 +323,21 @@ public class LlmClient {
     /** Via text, so BigDecimal keeps its scale (100.00), not 1E+2. */
     private JsonNode toTree(Object value) throws Exception {
         return mapper.readTree(mapper.writeValueAsString(value));
+    }
+
+    /** The user's turn: photos / PDFs as inlineData parts, text files as text, then the question. */
+    private ObjectNode userContent(String text, List<Attachment> files) {
+        ObjectNode c = mapper.createObjectNode().put("role", "user");
+        ArrayNode parts = c.putArray("parts");
+        for (Attachment f : files) {
+            if (f.isText()) {
+                parts.addObject().put("text", "File " + f.name() + ":\n" + f.text());
+            } else {
+                parts.addObject().putObject("inlineData").put("mimeType", f.mediaType()).put("data", f.data());
+            }
+        }
+        parts.addObject().put("text", text);
+        return c;
     }
 
     private ObjectNode textContent(String role, String text) {

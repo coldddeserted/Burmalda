@@ -34,7 +34,7 @@ public class CommonController {
 
     @PostMapping("/ai/chat")
     public ChatReply chat(@AuthenticationPrincipal AuthUser me, @Valid @RequestBody Requests.Chat body) {
-        return new ChatReply(ai.chat(users.require(me), body.message()));
+        return new ChatReply(ai.chat(users.require(me), body.message(), body.attachments()));
     }
 
     @GetMapping("/ai/suggestions")

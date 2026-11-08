@@ -26,6 +26,7 @@ The chat is a real agent: the model decides which tools to call, the backend run
 - Employee tools: my pay, my hours, my payouts, my tasks, my payout status — only their own data.
 - **Human in the loop, enforced in code:** the agent can only *propose* a payment. Money moves only if the proposal was shown in an earlier message and the accountant's latest message explicitly confirms it. The model cannot skip this step.
 - Every answer shows which tools the agent used (`🔧 get_payroll → propose_payroll_payment`).
+- **Voice, photos and files in the chat:** speak instead of typing (browser speech recognition), attach a photo of a receipt or an invoice PDF, a timesheet CSV — the model reads them and answers next to the company data.
 - AI summaries on the Tasks and Reports pages; rule-based answers on the same real data if no AI key is set.
 
 ## Features

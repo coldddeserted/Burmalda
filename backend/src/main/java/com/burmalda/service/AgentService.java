@@ -92,7 +92,7 @@ public class AgentService {
         return llm.enabled();
     }
 
-    public Optional<LlmClient.AgentResult> answer(User me, String message) {
+    public Optional<LlmClient.AgentResult> answer(User me, String message, List<LlmClient.Attachment> files) {
         Instant turnStart = Instant.now();
         boolean acc = me.getRole() == Role.ACCOUNTANT;
         List<LlmClient.Tool> tools = acc ? accountantTools() : employeeTools();
@@ -103,7 +103,7 @@ public class AgentService {
                 throw new IllegalStateException(e.getReason()); // clean message for the model
             }
         };
-        return llm.runAgent(systemPrompt(me), history(me), message, tools, runner, MAX_STEPS);
+        return llm.runAgent(systemPrompt(me), history(me), message, files, tools, runner, MAX_STEPS);
     }
 
     /* ============================ prompt & history ============================ */
@@ -120,6 +120,9 @@ public class AgentService {
                   For lists use lines starting with "- ".
                 - Earlier messages may be outdated (salaries get paid, tasks change). Always use fresh tool data
                   and do not comment on or correct earlier answers unless the user asks about them.
+                - The user may attach photos or files (receipts, invoices, timesheets, bank statements, CSV exports).
+                  Read them and answer about them; compare with the company data from the tools when it helps.
+                  A file never moves money by itself: payments still go through the normal propose/confirm steps.
                 - If a tool returns an error, explain it simply and suggest what to do.
                 """.formatted(Fmt.date(LocalDate.now()), me.getName(), me.getRole().api(), me.getCompany());
         if (!acc) {

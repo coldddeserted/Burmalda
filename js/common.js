@@ -276,6 +276,115 @@ function mountShell({ role, render }) {
   return { user, view };
 }
 
+/* ---------- AI chat: voice input, photos and files (used by both chats) ---------- */
+const ATT_MAX_FILES = 3, ATT_MAX_MB = 5;
+const ATT_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/csv'];
+
+function attType(f) {
+  const n = f.name.toLowerCase();
+  if (n.endsWith('.csv')) return 'text/csv';            // Windows often reports CSV as Excel
+  if (n.endsWith('.txt')) return 'text/plain';
+  if (n.endsWith('.pdf')) return 'application/pdf';
+  return f.type === 'image/jpg' ? 'image/jpeg' : f.type;
+}
+
+function readBase64(file) {
+  return new Promise((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1] || '');
+    r.onerror = () => fail(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+/* Shows photos / file names inside a chat message (names via textContent — safe). */
+function showAttachments(msg, files) {
+  if (!files || !files.length) return;
+  const box = document.createElement('div'); box.className = 'msg-att';
+  files.forEach((f) => {
+    if (f.type.startsWith('image/')) {
+      const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = f.name; box.append(img);
+    } else {
+      const s = document.createElement('span'); s.textContent = '📎 ' + f.name; box.append(s);
+    }
+  });
+  msg.insertBefore(box, msg.firstChild);
+}
+
+/* Wires the composer buttons: attach (any file), photo (gallery / camera), mic (speech to text). */
+function setupComposer(composer, input, { attachBtn, photoBtn, micBtn }) {
+  const files = [];
+  const bar = document.createElement('div'); bar.className = 'att-bar'; bar.hidden = true;
+  composer.insertBefore(bar, composer.firstChild);
+
+  const paint = () => {
+    bar.innerHTML = '';
+    files.forEach((f, i) => {
+      const chip = document.createElement('span'); chip.className = 'att';
+      if (f.type.startsWith('image/')) {
+        const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = ''; chip.append(img);
+      }
+      const name = document.createElement('span'); name.textContent = f.name; chip.append(name);
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove ' + f.name);
+      x.onclick = () => { files.splice(i, 1); paint(); };
+      chip.append(x); bar.append(chip);
+    });
+    bar.hidden = !files.length;
+  };
+  const add = (f) => {
+    const type = attType(f);
+    if (!ATT_TYPES.includes(type)) { toast(f.name + ': use a photo, PDF, CSV or TXT'); return; }
+    if (f.size > ATT_MAX_MB * 1024 * 1024) { toast(f.name + ': max ' + ATT_MAX_MB + ' MB'); return; }
+    if (files.length >= ATT_MAX_FILES) { toast('Max ' + ATT_MAX_FILES + ' files per message'); return; }
+    files.push(new File([f], f.name, { type })); paint();
+  };
+  const picker = (accept) => {
+    const el = document.createElement('input');
+    el.type = 'file'; el.accept = accept; el.multiple = true; el.hidden = true;
+    el.onchange = () => { [...el.files].forEach(add); el.value = ''; };
+    composer.append(el); return el;
+  };
+  const anyFile = picker('image/*,.pdf,.csv,.txt,application/pdf,text/csv,text/plain');
+  const photos = picker('image/*');
+  if (attachBtn) attachBtn.onclick = () => anyFile.click();
+  if (photoBtn) photoBtn.onclick = () => photos.click();
+  input.addEventListener('paste', (e) => { [...(e.clipboardData?.files || [])].forEach(add); });
+
+  /* voice: the browser's own speech recognition (Chrome, Edge, Safari), language = browser language */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  if (micBtn) micBtn.onclick = () => {
+    if (!SR) { toast('Voice input works in Chrome, Edge and Safari'); return; }
+    if (rec) { rec.stop(); return; }
+    rec = new SR();
+    rec.lang = navigator.language || 'en-US';
+    rec.interimResults = true;
+    const before = input.value.trim() ? input.value.trim() + ' ' : '';
+    rec.onresult = (e) => {
+      let t = ''; for (const r of e.results) t += r[0].transcript;
+      input.value = before + t;
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Allow the microphone for this site');
+      else if (e.error !== 'no-speech' && e.error !== 'aborted') toast('Voice input error: ' + e.error);
+    };
+    rec.onend = () => { rec = null; micBtn.classList.remove('rec'); micBtn.setAttribute('aria-pressed', 'false'); input.focus(); };
+    micBtn.classList.add('rec'); micBtn.setAttribute('aria-pressed', 'true');
+    try { rec.start(); } catch (e) { rec = null; micBtn.classList.remove('rec'); toast('Voice input is not available'); }
+  };
+
+  return {
+    has: () => files.length > 0,
+    /* hands the files over for sending and clears the composer */
+    async take() {
+      const list = files.splice(0);
+      paint();
+      const payload = await Promise.all(list.map(async (f) => ({ name: f.name, type: f.type, data: await readBase64(f) })));
+      return { files: list, payload };
+    }
+  };
+}
+
 /* ---------- AI-чат (используется в обеих ролях) ---------- */
 function chatHTML({ title, role }) {
   return `
@@ -290,9 +399,9 @@ function chatHTML({ title, role }) {
     <div class="composer">
       <textarea data-input rows="1" placeholder="Ask anything…" aria-label="Ask anything"></textarea>
       <div class="tools">
-        <button type="button" aria-label="Add">${icon('plus')}</button>
-        <button type="button" aria-label="Voice">${icon('mic')}</button>
-        <button type="button" aria-label="Image">${icon('image')}</button>
+        <button type="button" data-attach aria-label="Attach a file" title="Attach a file (PDF, CSV, TXT, photo)">${icon('plus')}</button>
+        <button type="button" data-mic aria-label="Voice input" aria-pressed="false" title="Voice input">${icon('mic')}</button>
+        <button type="button" data-photo aria-label="Add a photo" title="Add a photo">${icon('image')}</button>
         <button type="button" class="send" data-send aria-label="Send">${icon('send')}</button>
       </div>
     </div>
@@ -305,11 +414,14 @@ function bindChat(root, role) {
     const m = document.createElement('div'); m.className = 'msg ' + cls; m.textContent = text;
     log.appendChild(m); log.classList.add('has'); hello.style.display = 'none'; log.scrollTop = log.scrollHeight; return m;
   };
+  const extras = setupComposer($('.composer', root), input,
+    { attachBtn: $('[data-attach]', root), photoBtn: $('[data-photo]', root), micBtn: $('[data-mic]', root) });
   async function send() {
-    const q = input.value.trim(); if (!q) return;
-    input.value = ''; add('me', q);
+    const q = input.value.trim(); if (!q && !extras.has()) return;
+    const { files, payload } = await extras.take();
+    input.value = ''; showAttachments(add('me', q), files);
     const wait = add('ai', '…');
-    try { wait.textContent = await API.askAI(q, role); } catch (e) { wait.textContent = 'Ошибка: ' + e.message; }
+    try { wait.textContent = await API.askAI(q, role, payload); } catch (e) { wait.textContent = 'Error: ' + e.message; }
     log.scrollTop = log.scrollHeight;
   }
   $('[data-send]', root).onclick = send;

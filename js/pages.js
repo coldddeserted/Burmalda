@@ -53,8 +53,9 @@ async function renderAIPage(role, view) {
         <div class="composer">
           <textarea id="aiInput" rows="1" placeholder="Ask the PayPal AI agent…" aria-label="Message"></textarea>
           <div class="tools">
-            <button type="button" aria-label="Attach">${icon('plus')}</button>
-            <button type="button" aria-label="Voice">${icon('mic')}</button>
+            <button type="button" data-attach aria-label="Attach a file" title="Attach a file (PDF, CSV, TXT, photo)">${icon('plus')}</button>
+            <button type="button" data-mic aria-label="Voice input" aria-pressed="false" title="Voice input">${icon('mic')}</button>
+            <button type="button" data-photo aria-label="Add a photo" title="Add a photo">${icon('image')}</button>
             <button type="button" class="send" id="aiSend" aria-label="Send">${icon('send')}</button>
           </div>
         </div>
@@ -77,14 +78,18 @@ async function renderAIPage(role, view) {
     const t = document.createElement('small'); t.textContent = time(); m.append(t);
     thread.appendChild(m); thread.scrollTop = thread.scrollHeight; return m;
   };
+  const composer = $('.composer', view);
+  const extras = setupComposer(composer, input,
+    { attachBtn: $('[data-attach]', composer), photoBtn: $('[data-photo]', composer), micBtn: $('[data-mic]', composer) });
   async function send(text) {
-    const q = (text ?? input.value).trim(); if (!q) return;
-    input.value = ''; add('me', q);
+    const q = (text ?? input.value).trim(); if (!q && !extras.has()) return;
+    const { files, payload } = text == null ? await extras.take() : { files: [], payload: [] };
+    input.value = ''; showAttachments(add('me', q), files);
     const wait = document.createElement('div'); wait.className = 'msg ai';
     wait.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
     thread.appendChild(wait); thread.scrollTop = thread.scrollHeight;
     let reply;
-    try { reply = await API.askAI(q, role); } catch (e) { reply = 'Error: ' + e.message; }
+    try { reply = await API.askAI(q, role, payload); } catch (e) { reply = 'Error: ' + e.message; }
     wait.remove(); add('ai', reply);
   }
   $('#aiSend').onclick = () => send();

@@ -66,6 +66,7 @@ public class ClaudeClient {
     }
 
     public Optional<LlmClient.AgentResult> runAgent(String system, List<LlmClient.Turn> history, String userMessage,
+                                                    List<LlmClient.Attachment> files,
                                                     List<LlmClient.Tool> tools, LlmClient.ToolRunner runner,
                                                     int maxSteps) {
         if (!enabled()) return Optional.empty();
@@ -74,7 +75,7 @@ public class ClaudeClient {
             for (LlmClient.Turn t : history) {
                 messages.add(textMessage("model".equals(t.role()) ? "assistant" : "user", t.text()));
             }
-            messages.add(textMessage("user", userMessage));
+            messages.add(userMessage(userMessage, files));
 
             ObjectNode body = mapper.createObjectNode();
             body.put("model", model);
@@ -183,6 +184,23 @@ public class ClaudeClient {
             return out;
         }
         return node;
+    }
+
+    /** The user's turn: images and PDFs as image / document blocks (first, as Anthropic recommends), then text. */
+    private ObjectNode userMessage(String text, List<LlmClient.Attachment> files) {
+        ObjectNode m = mapper.createObjectNode().put("role", "user");
+        ArrayNode content = m.putArray("content");
+        for (LlmClient.Attachment f : files) {
+            if (f.isText()) {
+                content.addObject().put("type", "text").put("text", "File " + f.name() + ":\n" + f.text());
+                continue;
+            }
+            ObjectNode block = content.addObject();
+            block.put("type", f.mediaType().startsWith("image/") ? "image" : "document");
+            block.putObject("source").put("type", "base64").put("media_type", f.mediaType()).put("data", f.data());
+        }
+        content.addObject().put("type", "text").put("text", text);
+        return m;
     }
 
     private ObjectNode textMessage(String role, String text) {

@@ -398,8 +398,9 @@ const API = {
   },
 
   /** POST /ai/chat {message, role} -> {reply} */
-  async askAI(message, role) {
-    if (!CONFIG.USE_MOCK) return (await http('POST', '/ai/chat', { message, role })).reply;
+  /** attachments: [{name, type, data(base64)}] — photos and files from the chat */
+  async askAI(message, role, attachments = []) {
+    if (!CONFIG.USE_MOCK) return (await http('POST', '/ai/chat', { message, role, attachments })).reply;
     await sleep(700);
     return MOCK2.aiReply(message, role);
   },

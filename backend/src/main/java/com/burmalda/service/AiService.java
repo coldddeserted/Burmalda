@@ -6,12 +6,14 @@ import com.burmalda.repo.CompanyAccountRepository;
 import com.burmalda.repo.PayoutRepository;
 import com.burmalda.repo.PaypalTransactionRepository;
 import com.burmalda.repo.TaskRepository;
+import com.burmalda.util.Errors;
 import com.burmalda.util.Fmt;
 import com.burmalda.web.dto.AccountantViews.AnomalyRow;
 import com.burmalda.web.dto.AccountantViews.PendingRow;
 import com.burmalda.web.dto.AccountantViews.SavingRow;
 import com.burmalda.web.dto.CommonViews.AiSummary;
 import com.burmalda.web.dto.CommonViews.SummaryPoint;
+import com.burmalda.web.dto.Requests;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,28 +65,76 @@ public class AiService {
      * risk alerts and can pay salaries through PayPal Payouts after the user confirms.
      * Without a key or if the AI call fails: rule-based answers on the same real data.
      */
+    /** Photos the models can read, plus PDF and plain-text files. */
+    private static final Set<String> FILE_TYPES = Set.of(
+            "image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "text/plain", "text/csv");
+    private static final int MAX_FILE_BYTES = 5 * 1024 * 1024;
+
     public String chat(User me, String message) {
+        return chat(me, message, List.of());
+    }
+
+    /**
+     * With an AI key: the agent (AgentService) — reads payroll, PayPal transactions, risk alerts, attached
+     * photos and files, and can pay salaries through PayPal Payouts after the user confirms.
+     * Without a key or if the AI call fails: rule-based answers on the same real data.
+     */
+    public String chat(User me, String message, List<Requests.Attachment> attachments) {
+        List<LlmClient.Attachment> files = checkFiles(attachments);
+        String q = message == null ? "" : message.trim();
+        if (q.isEmpty() && files.isEmpty()) throw Errors.badRequest("Type a question or attach a file");
+        if (q.isEmpty()) q = "Look at the attached file" + (files.size() > 1 ? "s" : "") + " and tell me what matters for us.";
+
         boolean acc = me.getRole() == Role.ACCOUNTANT;
         String reply;
         String footer = "";
-        Optional<LlmClient.AgentResult> ai = agent.enabled() ? agent.answer(me, message) : Optional.empty();
+        Optional<LlmClient.AgentResult> ai = agent.enabled() ? agent.answer(me, q, files) : Optional.empty();
         if (ai.isPresent()) {
             reply = plain(ai.get().text());
             if (!ai.get().toolsUsed().isEmpty()) {
                 footer = "\n\n🔧 " + String.join(" → ", ai.get().toolsUsed());
             }
+        } else if (!files.isEmpty()) {
+            reply = "I can read photos and files only when the AI model is connected. "
+                    + (agent.enabled() ? "It is busy right now — try again in a minute." : "Ask me in text meanwhile.");
         } else {
-            reply = acc ? accountantRules(me, message) : employeeRules(me, message);
-            // the key is set but Gemini did not answer: say so instead of pretending to be the AI
+            reply = acc ? accountantRules(me, q) : employeeRules(me, q);
+            // the key is set but the model did not answer: say so instead of pretending to be the AI
             if (agent.enabled()) footer = "\n\n⚠️ The AI model is busy right now — this is a quick answer from your data. Try again in a minute.";
         }
 
         ChatMessage c = new ChatMessage();
         c.setUser(me);
-        c.setQuestion(message);
+        // files are not stored, only their names: the history stays small
+        String stored = files.isEmpty() ? q
+                : q + " [attached: " + String.join(", ", files.stream().map(LlmClient.Attachment::name).toList()) + "]";
+        c.setQuestion(stored.length() > 2000 ? stored.substring(0, 2000) : stored);
         c.setReply(reply.length() > 8000 ? reply.substring(0, 8000) : reply);
         chats.save(c);
         return reply + footer;
+    }
+
+    /** Only known types, valid base64, max 5 MB each (checked on the server, the browser can lie). */
+    private static List<LlmClient.Attachment> checkFiles(List<Requests.Attachment> attachments) {
+        if (attachments == null || attachments.isEmpty()) return List.of();
+        if (attachments.size() > 3) throw Errors.badRequest("At most 3 files per message");
+        List<LlmClient.Attachment> out = new ArrayList<>();
+        for (Requests.Attachment a : attachments) {
+            String type = a.type().toLowerCase(Locale.ROOT).trim();
+            if (type.equals("image/jpg")) type = "image/jpeg";
+            if (!FILE_TYPES.contains(type)) {
+                throw Errors.badRequest(a.name() + ": unsupported file type. Use a photo, PDF, CSV or TXT.");
+            }
+            byte[] bytes;
+            try {
+                bytes = Base64.getDecoder().decode(a.data());
+            } catch (IllegalArgumentException e) {
+                throw Errors.badRequest(a.name() + ": broken file data");
+            }
+            if (bytes.length > MAX_FILE_BYTES) throw Errors.badRequest(a.name() + ": file is too large (max 5 MB)");
+            out.add(new LlmClient.Attachment(a.name(), type, a.data()));
+        }
+        return out;
     }
 
     /** The chat shows plain text: drop markdown the model may still use (**bold**, # headings). */
