@@ -11,11 +11,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +42,10 @@ public class LlmClient {
     private final String apiKey;
     private final String model;
     private final List<String> fallbackModels;
+    /** Model that answered last time: if the main one is down we stick to the one that works. */
+    private volatile String activeModel;
+    /** Flash models this key can use, asked from Google once (GET /v1beta/models). */
+    private volatile List<String> discovered;
     private final RestClient http;
     private final ObjectMapper mapper;
 
@@ -49,6 +56,7 @@ public class LlmClient {
                      ObjectMapper mapper) {
         this.apiKey = apiKey;
         this.model = model;
+        this.activeModel = model;
         this.fallbackModels = fallbackModels.stream().map(String::trim).filter(x -> !x.isEmpty()).toList();
         // own copy: keep BigDecimal as written (100.00, not 1E+2) when tool results go to the model
         this.mapper = mapper.copy()
@@ -57,7 +65,7 @@ public class LlmClient {
         // java.net.http client with timeouts: without them a stuck request hangs the chat forever
         JdkClientHttpRequestFactory rf = new JdkClientHttpRequestFactory(
                 java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(10)).build());
-        rf.setReadTimeout(java.time.Duration.ofSeconds(60));
+        rf.setReadTimeout(java.time.Duration.ofSeconds(30)); // a stuck model -> switch to another one sooner
         this.http = RestClient.builder().baseUrl(baseUrl).requestFactory(rf).build();
     }
 
@@ -84,7 +92,7 @@ public class LlmClient {
     }
 
     public String model() {
-        return model;
+        return activeModel;
     }
 
     public Optional<AgentResult> runAgent(String system, List<Turn> history, String userMessage,
@@ -110,16 +118,11 @@ public class LlmClient {
                 }
                 body.set("tools", mapper.createArrayNode().add(mapper.createObjectNode().set("functionDeclarations", decls)));
             }
-            ObjectNode gen = mapper.createObjectNode().put("temperature", 0.2);
-            // "thinking" makes answers slow (the 2nd step took >45 s). A small budget is plenty for our tools.
-            if (model.contains("2.5")) gen.set("thinkingConfig", mapper.createObjectNode().put("thinkingBudget", 512));
-            else if (model.startsWith("gemini-3")) gen.set("thinkingConfig", mapper.createObjectNode().put("thinkingLevel", "low"));
-            body.set("generationConfig", gen);
 
             List<String> used = new ArrayList<>();
             for (int step = 0; step < maxSteps; step++) {
                 long t0 = System.currentTimeMillis();
-                String raw = call(mapper.writeValueAsString(body));
+                String raw = call(body);
                 log.info("Gemini step {} took {} ms ({} tools used so far)", step + 1,
                         System.currentTimeMillis() - t0, used.size());
                 JsonNode res = raw == null || raw.isBlank() ? null : mapper.readTree(raw);
@@ -175,36 +178,114 @@ public class LlmClient {
     }
 
     /**
-     * One generateContent call with retries. Gemini sometimes answers 503 "high demand" or 429 (free tier
-     * limit): wait and try again, then try the fallback models (AI_FALLBACK_MODELS) if any.
+     * One generateContent call that survives a bad moment at Google:
+     *  - 429 / 500 / 503 ("high demand", free tier limit) -> wait and retry the same model once;
+     *  - timeout or still failing -> try the next model: AI_FALLBACK_MODELS, then the flash models
+     *    this key can use (asked from Google, not guessed);
+     *  - the model that worked becomes the first choice for the next requests.
+     * The whole call gives up after ~75 s, then the chat answers with rules.
      */
-    private String call(String json) {
-        List<String> models = new ArrayList<>();
-        models.add(model);
-        models.addAll(fallbackModels);
-        RestClientResponseException last = null;
-        for (String m : models) {
-            for (int attempt = 1; attempt <= 3; attempt++) {
+    private String call(ObjectNode body) throws Exception {
+        long deadline = System.currentTimeMillis() + 75_000;
+        List<String> models = new ArrayList<>(new LinkedHashSet<>(candidates(false)));
+        Exception last = null;
+        for (int i = 0; i < models.size(); i++) {
+            String m = models.get(i);
+            int attempts = i == 0 ? 2 : 1;
+            for (int attempt = 1; attempt <= attempts; attempt++) {
+                if (System.currentTimeMillis() > deadline) throw last != null ? last : new IllegalStateException("AI timeout");
                 try {
+                    body.set("generationConfig", generationConfig(m));
                     // read as text and parse ourselves: does not depend on the response Content-Type
-                    return http.post()
+                    String raw = http.post()
                             .uri("/v1beta/models/{model}:generateContent", m)
                             .header("x-goog-api-key", apiKey)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .body(json)
+                            .body(mapper.writeValueAsString(body))
                             .retrieve()
                             .body(String.class);
+                    if (!m.equals(activeModel)) {
+                        log.info("Gemini: switched to model {}", m);
+                        activeModel = m;
+                    }
+                    return raw;
                 } catch (RestClientResponseException e) {
                     int code = e.getStatusCode().value();
                     boolean temporary = code == 429 || code == 500 || code == 503;
-                    if (!temporary) throw e;
+                    boolean unknownModel = code == 404 || code == 400 && i > 0;
+                    if (!temporary && !unknownModel) throw e;
                     last = e;
-                    log.warn("Gemini {} answered {} (attempt {}/3), retrying...", m, code, attempt);
-                    sleep(attempt * 1500L);
+                    log.warn("Gemini {} answered {} (attempt {}/{})", m, code, attempt, attempts);
+                    if (unknownModel) break;
+                    if (attempt < attempts) sleep(1500);
+                } catch (ResourceAccessException e) {
+                    last = e;
+                    log.warn("Gemini {} did not answer in time, trying another model", m);
+                    break; // a stuck model will not get faster on a retry
                 }
             }
+            if (i == models.size() - 1) {
+                // ran out of known models -> ask Google which ones this key can use (once)
+                for (String extra : candidates(true)) if (!models.contains(extra)) models.add(extra);
+            }
         }
-        throw last;
+        throw last != null ? last : new IllegalStateException("No Gemini model answered");
+    }
+
+    /** Order: the model that worked last time, the configured one, AI_FALLBACK_MODELS, then discovered ones. */
+    private List<String> candidates(boolean withDiscovered) {
+        List<String> list = new ArrayList<>();
+        list.add(activeModel);
+        list.add(model);
+        list.addAll(fallbackModels);
+        if (withDiscovered) list.addAll(discover());
+        return list;
+    }
+
+    /**
+     * GET /v1beta/models: which models this API key may call. We keep text "flash" models that support
+     * generateContent (fast and cheap): stable ones first, then "lite", then previews. Max 4.
+     */
+    private List<String> discover() {
+        if (discovered != null) return discovered;
+        List<String> found = new ArrayList<>();
+        try {
+            String raw = http.get()
+                    .uri("/v1beta/models?pageSize=200")
+                    .header("x-goog-api-key", apiKey)
+                    .retrieve()
+                    .body(String.class);
+            for (JsonNode m : mapper.readTree(raw).path("models")) {
+                String name = m.path("name").asText().replaceFirst("^models/", "");
+                boolean canChat = false;
+                for (JsonNode method : m.path("supportedGenerationMethods")) {
+                    if ("generateContent".equals(method.asText())) canChat = true;
+                }
+                boolean textFlash = name.contains("flash") && !name.matches(".*(image|tts|audio|live|embedding|vision).*");
+                if (canChat && textFlash) found.add(name);
+            }
+            found.sort(Comparator.comparingInt(LlmClient::rank).thenComparing(Comparator.reverseOrder()));
+            if (found.size() > 4) found = new ArrayList<>(found.subList(0, 4));
+            log.info("Gemini models available for this key: {}", found);
+        } catch (Exception e) {
+            log.warn("Could not list Gemini models: {}", e.toString());
+        }
+        discovered = found;
+        return found;
+    }
+
+    private static int rank(String name) {
+        if (name.contains("preview") || name.contains("exp")) return 2;
+        if (name.contains("lite")) return 1;
+        return 0;
+    }
+
+    /** "Thinking" makes answers slow; a small budget is plenty for our tools. Each model family has its own knob. */
+    private ObjectNode generationConfig(String m) {
+        ObjectNode gen = mapper.createObjectNode().put("temperature", 0.2);
+        if (m.contains("2.5")) gen.set("thinkingConfig", mapper.createObjectNode().put("thinkingBudget", 512));
+        else if (m.startsWith("gemini-3")) gen.set("thinkingConfig", mapper.createObjectNode().put("thinkingLevel", "low"));
+        return gen;
     }
 
     private static void sleep(long ms) {

@@ -75,6 +75,8 @@ public class AiService {
             }
         } else {
             reply = acc ? accountantRules(me, message) : employeeRules(me, message);
+            // the key is set but Gemini did not answer: say so instead of pretending to be the AI
+            if (agent.enabled()) footer = "\n\n⚠️ The AI model is busy right now — this is a quick answer from your data. Try again in a minute.";
         }
 
         ChatMessage c = new ChatMessage();
@@ -175,7 +177,7 @@ public class AiService {
     private String accountantRules(User me, String q) {
         String t = q.toLowerCase();
         YearMonth m = payroll.payPeriod(me.getCompany());
-        if (has(t, "pending", "approv", "одобр", "ожида")) {
+        if (has(t, "pending", "approv", "одобр", "ожида", "zatwierdz", "oczekuj")) {
             List<PendingRow> p = accountantDashboard.pendingRows(me.getCompany());
             if (p.isEmpty()) return "No payments are waiting for approval right now.";
             PendingRow big = p.stream().max(Comparator.comparing(PendingRow::amount)).get();
@@ -183,7 +185,7 @@ public class AiService {
             return "There are " + p.size() + " payments waiting for approval, $" + money(sum) + " in total. The largest is "
                     + big.name() + " ($" + money(big.amount()) + ", due " + big.due() + ").";
         }
-        if (has(t, "salar", "payroll", "зарплат", "owe", "зп")) {
+        if (has(t, "salar", "payroll", "pay ", "employee", "staff", "worker", "зарплат", "зп", "owe", "выплат", "заплат", "работник", "сотрудник", "персонал", "wypłat", "wynagrodz", "pensj", "pracown")) {
             var month = payroll.companyMonth(me.getCompany(), m);
             var unpaid = month.stream().filter(e -> !e.paid()).toList();
             var paid = month.stream().filter(PayrollService.EmployeeMonth::paid).map(e -> e.user().getName()).toList();
@@ -192,7 +194,7 @@ public class AiService {
                     + unpaid.size() + " employees." + (paid.isEmpty() ? "" : " Already paid: " + String.join(", ", paid) + ".")
                     + " You can send all of it in one Mass Pay batch from the Tasks page.";
         }
-        if (has(t, "unusual", "anomal", "risk", "аном", "риск", "подозр")) {
+        if (has(t, "unusual", "anomal", "risk", "suspic", "fraud", "аном", "риск", "подозр", "странн", "podejrz", "ryzyk")) {
             List<AnomalyRow> a = anomalies.detect(me.getCompany());
             if (a.isEmpty()) return "Nothing looks unusual in recent payments.";
             StringBuilder sb = new StringBuilder(a.size() + " payments are flagged: ");
@@ -202,7 +204,7 @@ public class AiService {
             }
             return sb.toString();
         }
-        if (has(t, "cash", "flow", "поток", "приход", "расход")) {
+        if (has(t, "cash", "flow", "income", "expense", "поток", "приход", "расход", "доход", "przepływ", "wydatk", "przychod")) {
             YearMonth cfMonth = YearMonth.now();
             var cf = accountantDashboard.cashFlow(txs.findByCompanyAndOwnerIsNullOrderByDateTimeDesc(me.getCompany()), cfMonth);
             double in = cf.bars().stream().mapToDouble(b -> b.in()).sum();
@@ -210,14 +212,14 @@ public class AiService {
             return Fmt.monthLong(cfMonth) + " so far: inflow $" + Fmt.round1(in) + "k, outflow $" + Fmt.round1(out) + "k, net $"
                     + Fmt.round1(in - out) + "k. Forecast for next week: $" + cf.forecast().get(cf.forecast().size() - 1) + "k inflow.";
         }
-        if (has(t, "save", "saving", "mass", "эконом")) {
+        if (has(t, "save", "saving", "mass", "fee", "эконом", "комисс", "oszczęd", "prowizj")) {
             List<SavingRow> s = savings(me);
             BigDecimal total = s.stream().map(SavingRow::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
             return "Mass Pay and Smart FX routing saved $" + money(total) + " this month ("
                     + s.get(0).label() + ": $" + money(s.get(0).amount()) + ", " + s.get(1).label() + ": $"
                     + money(s.get(1).amount()) + ").";
         }
-        if (has(t, "balance", "баланс", "сколько денег")) {
+        if (has(t, "balance", "баланс", "сколько денег", "счёт", "счет", "saldo", "stan konta")) {
             return accounts.findByCompany(me.getCompany())
                     .map(a -> "PayPal business balance: $" + money(a.getBalance()) + ".")
                     .orElse("The company PayPal account is not set up yet.");
@@ -228,14 +230,14 @@ public class AiService {
     private String employeeRules(User me, String q) {
         String t = q.toLowerCase();
         YearMonth m = payroll.payPeriod(me);
-        if (has(t, "payday", "salary", "зарплат", "зп", "когда")) {
+        if (has(t, "payday", "salary", "earn", "зарплат", "зп", "когда", "заработ", "wypłat", "zarob", "pensj", "kiedy")) {
             var cur = payroll.monthFor(me, m);
             if (cur.paid()) return "Your " + Fmt.monthLong(m) + " salary ($" + money(cur.salary()) + ") is already on your PayPal account.";
             return "Your next salary is scheduled for " + Fmt.date(PayrollService.payday(m)) + ". So far this month you earned $"
                     + money(cur.salary()) + " (" + cur.hours() + " h × $" + money(me.getHourlyRate())
                     + (cur.bonus().signum() > 0 ? " + $" + money(cur.bonus()) + " project bonus" : "") + ").";
         }
-        if (has(t, "payout", "paypal", "last", "выплат")) {
+        if (has(t, "payout", "paypal", "last", "выплат", "перевод", "przelew")) {
             List<Payout> list = payouts.findByUserOrderByDateDesc(me).stream().limit(3).toList();
             if (list.isEmpty()) return "You have no payouts yet.";
             StringBuilder sb = new StringBuilder("Last payouts: ");
@@ -247,7 +249,7 @@ public class AiService {
             }
             return sb.append('.').toString();
         }
-        if (has(t, "hour", "time", "час", "время")) {
+        if (has(t, "hour", "time", "час", "время", "godzin", "czas")) {
             LocalDate monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
             double best = 0;
             LocalDate bestDay = monday;
@@ -262,11 +264,11 @@ public class AiService {
                     + (best > 0 ? " " + bestDay.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH)
                     + " was your longest day with " + Fmt.round1(best) + " hours." : "");
         }
-        if (has(t, "withdraw", "bank", "вывод", "вывест", "банк")) {
+        if (has(t, "withdraw", "bank", "вывод", "вывест", "банк", "konto bankowe")) {
             return "Open My wallet, press Withdraw to PayPal, enter the amount and confirm. You have $"
                     + money(me.getWalletBalance()) + " available. Transfers to your bank usually take 1 to 3 business days.";
         }
-        if (has(t, "task", "задач")) {
+        if (has(t, "task", "задач", "zadan")) {
             List<Task> open = tasks.findByAssigneeOrderByDueDateAsc(me).stream()
                     .filter(x -> x.getStatus() != TaskStatus.DONE).toList();
             if (open.isEmpty()) return "You have no open tasks. Nice!";
