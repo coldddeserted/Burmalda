@@ -4,14 +4,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
+import org.springframework.web.servlet.resource.ResourceTransformer;
+import org.springframework.web.servlet.resource.ResourceTransformerChain;
+import org.springframework.web.servlet.resource.TransformedResource;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -77,7 +82,29 @@ public class FrontendConfig implements WebMvcConfigurer {
                     protected Resource getResource(String path, Resource location) throws IOException {
                         return ALLOWED.matcher(path).matches() ? super.getResource(path, location) : null;
                     }
-                });
+                })
+                .addTransformer(new RealBackendSwitch());
+    }
+
+    /**
+     * Safety net: when the backend serves the frontend, it must talk to the backend.
+     * js/api.js has a USE_MOCK switch for opening the pages without a server; if a copy with
+     * USE_MOCK: true gets committed, the site would silently show demo data. So we flip it here.
+     */
+    static class RealBackendSwitch implements ResourceTransformer {
+        private static final Pattern MOCK_ON = Pattern.compile("USE_MOCK\\s*:\\s*true");
+
+        @Override
+        public Resource transform(HttpServletRequest request, Resource resource, ResourceTransformerChain chain)
+                throws IOException {
+            resource = chain.transform(request, resource);
+            if (!"api.js".equals(resource.getFilename())) return resource;
+            String js = new String(resource.getContentAsByteArray(), StandardCharsets.UTF_8);
+            if (!MOCK_ON.matcher(js).find()) return resource;
+            log.warn("js/api.js has USE_MOCK: true — serving it with USE_MOCK: false (real backend)");
+            return new TransformedResource(resource, MOCK_ON.matcher(js).replaceFirst("USE_MOCK: false")
+                    .getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     @Override
