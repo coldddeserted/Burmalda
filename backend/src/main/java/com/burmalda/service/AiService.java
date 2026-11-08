@@ -69,7 +69,7 @@ public class AiService {
         String footer = "";
         Optional<LlmClient.AgentResult> ai = agent.enabled() ? agent.answer(me, message) : Optional.empty();
         if (ai.isPresent()) {
-            reply = ai.get().text();
+            reply = plain(ai.get().text());
             if (!ai.get().toolsUsed().isEmpty()) {
                 footer = "\n\n🔧 " + String.join(" → ", ai.get().toolsUsed());
             }
@@ -85,6 +85,13 @@ public class AiService {
         c.setReply(reply.length() > 8000 ? reply.substring(0, 8000) : reply);
         chats.save(c);
         return reply + footer;
+    }
+
+    /** The chat shows plain text: drop markdown the model may still use (**bold**, # headings). */
+    static String plain(String text) {
+        return text.replaceAll("\\*\\*(.+?)\\*\\*", "$1")
+                .replaceAll("(?m)^#{1,6}\\s+", "")
+                .replaceAll("(?m)^\\s*\\*\\s+", "- ");
     }
 
     public List<String> suggestions(User me) {

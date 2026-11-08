@@ -5,6 +5,7 @@ import com.burmalda.repo.ChatMessageRepository;
 import com.burmalda.repo.CompanyAccountRepository;
 import com.burmalda.repo.PayoutRepository;
 import com.burmalda.repo.PaypalTransactionRepository;
+import com.burmalda.repo.ProjectRepository;
 import com.burmalda.repo.TaskRepository;
 import com.burmalda.util.Fmt;
 import com.burmalda.web.dto.AccountantViews.InOut;
@@ -56,6 +57,7 @@ public class AgentService {
     private final LlmClient llm;
     private final PayoutRepository payouts;
     private final TaskRepository tasks;
+    private final ProjectRepository projects;
     private final PaypalTransactionRepository txs;
     private final CompanyAccountRepository accounts;
     private final ChatMessageRepository chats;
@@ -66,7 +68,9 @@ public class AgentService {
     public AgentService(PayrollService payroll, AnomalyService anomalies, AccountantDashboardService dashboard,
                         AccountingService accounting, BudgetService budgets, PaypalClient paypal, LlmClient llm,
                         PayoutRepository payouts, TaskRepository tasks, PaypalTransactionRepository txs,
-                        CompanyAccountRepository accounts, ChatMessageRepository chats) {
+                        CompanyAccountRepository accounts, ChatMessageRepository chats,
+                        ProjectRepository projects) {
+        this.projects = projects;
         this.payroll = payroll;
         this.anomalies = anomalies;
         this.dashboard = dashboard;
@@ -112,6 +116,10 @@ public class AgentService {
                 Rules:
                 - Get every number from the tools. Never invent or estimate figures. Money is USD.
                 - Answer in the language of the user's last message. Be brief: 2-5 sentences or a short list.
+                - Plain text only, the chat does not render markdown: no **bold**, no # headings, no tables.
+                  For lists use lines starting with "- ".
+                - Earlier messages may be outdated (salaries get paid, tasks change). Always use fresh tool data
+                  and do not comment on or correct earlier answers unless the user asks about them.
                 - If a tool returns an error, explain it simply and suggest what to do.
                 """.formatted(Fmt.date(LocalDate.now()), me.getName(), me.getRole().api(), me.getCompany());
         if (!acc) {
@@ -166,6 +174,9 @@ public class AgentService {
                         "AI risk alerts: duplicate payments and unusually large transfers.", null),
                 new LlmClient.Tool("get_cash_flow",
                         "Inflow and outflow per week of the current month (in thousands USD) and a forecast.", null),
+                new LlmClient.Tool("get_projects",
+                        "All company projects: status (running / ended / on discuss), lead, progress, due or end "
+                                + "date, budget, and who works on each project (people with tasks in it).", null),
                 new LlmClient.Tool("get_department_budgets",
                         "Monthly budget per department: allocated, spent, head count.", null),
                 new LlmClient.Tool("propose_payroll_payment",
@@ -232,6 +243,26 @@ public class AgentService {
                         "nextWeekInflowForecastK", cf.forecast().get(cf.forecast().size() - 1));
             }
             case "get_department_budgets" -> budgets.allocation(company, YearMonth.now());
+            case "get_projects" -> {
+                Map<Long, List<Task>> byProject = new HashMap<>();
+                for (Task t : tasks.findByAssignee_Company(company)) {
+                    byProject.computeIfAbsent(t.getProject().getId(), k -> new ArrayList<>()).add(t);
+                }
+                List<Map<String, Object>> rows = new ArrayList<>();
+                for (Project p : projects.findByCompany(company)) {
+                    List<Task> list = byProject.getOrDefault(p.getId(), List.of());
+                    Set<String> people = new TreeSet<>();
+                    for (Task t : list) people.add(t.getAssignee().getName());
+                    rows.add(ordered("name", p.getName(), "status", p.getStatus().name().toLowerCase(),
+                            "lead", p.getLead() == null ? null : p.getLead().getName(),
+                            "progressPercent", p.getProgress(),
+                            "due", Fmt.date(p.getDueDate()), "ended", Fmt.date(p.getEndDate()),
+                            "budget", p.getBudget(), "note", p.getNote(),
+                            "people", people, "tasks", list.size(),
+                            "tasksDone", list.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count()));
+                }
+                yield rows;
+            }
             case "propose_payroll_payment" -> propose(me, args);
             case "execute_payroll_payment" -> execute(me, userMessage, turnStart);
             case "check_payout_status" -> {
