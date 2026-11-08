@@ -91,6 +91,7 @@ async function renderDashboard(_id, view) {
         <div>${sparkline(d.payroll.weekly)}<div style="text-align:right">${PAYPAL}</div></div>
       </div>
     </div>
+    <div class="m-rail">
     <div class="card">
       <div class="row-head"><h2>Pending Approvals</h2><button class="arrow-btn" id="approveBtn" aria-label="Open">${icon('arrow')}</button></div>
       <div class="stat-big" style="font-size:52px">${money(d.pendingApprovals.amount, 2)}<small>${esc(d.pendingApprovals.currency)}</small></div>
@@ -106,6 +107,7 @@ async function renderDashboard(_id, view) {
           <div><button data-b="up" aria-label="Transfer">${icon('upload')}</button>$${money(s3, 2)}</div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -160,7 +162,7 @@ async function renderDashboard(_id, view) {
 
   /* ---- раскрываемые виджеты ---- */
   const x = d.details;
-  const [cPay, cPend, cBud] = $$('.g-top-acc > .card', view);
+  const [cPay, cPend, cBud] = $$('.g-top-acc .card', view);
   const [cRisk, cComp] = $$('.g-mid-acc > .stack > .card', view);
   const [cCash, cTx, cDept] = $$('.g-mid-acc > .card', view);
   const [cSave] = $$('.g-bot-acc > .card', view);
@@ -298,8 +300,6 @@ async function renderAccTasks(_id, view) {
   const E = t.employees;
   const unpaid = () => E.filter((e) => e.status !== 'Paid');
   const total = (arr, k) => arr.reduce((a, e) => a + e[k], 0);
-  // часы — дробные: округляем до 0.1, иначе float даёт 1134.3999999999999
-  const hrs = (v) => (Math.round(v * 10) / 10).toLocaleString('en-US');
 
   function paint() {
     const due = total(unpaid(), 'salary'), paid = total(E.filter((e) => e.status === 'Paid'), 'salary');
@@ -321,10 +321,10 @@ async function renderAccTasks(_id, view) {
           <tbody>${E.map((e) => `<tr class="click" data-id="${e.id}">
             <td><div class="who"><div class="avatar av-${(e.id % 5) + 1}">${esc(initials(e.name))}</div><div><b>${esc(e.name)}</b><span>${esc(e.dept)}</span></div></div></td>
             <td style="min-width:130px"><div style="font-size:13px;margin-bottom:6px">${e.tasksDone} / ${e.tasksTotal}</div><div class="bar"><i style="width:${Math.round(e.tasksDone / e.tasksTotal * 100)}%"></i></div></td>
-            <td class="num">${e.projectsEnded}</td><td class="num">${hrs(e.hours)} h</td><td class="num"><b>$${money(e.salary)}</b></td>
+            <td class="num">${e.projectsEnded}</td><td class="num">${e.hours} h</td><td class="num"><b>$${money(e.salary)}</b></td>
             <td>${badge(e.status)}</td>
             <td class="num">${e.status === 'Paid' ? '' : `<button class="btn sm" data-pay="${e.id}">Pay</button>`}</td></tr>`).join('')}</tbody>
-          <tfoot><tr><td>Total</td><td>${total(E, 'tasksDone')} / ${total(E, 'tasksTotal')}</td><td class="num">${total(E, 'projectsEnded')}</td><td class="num">${hrs(total(E, 'hours'))} h</td><td class="num">$${money(total(E, 'salary'))}</td><td></td><td></td></tr></tfoot>
+          <tfoot><tr><td>Total</td><td>${total(E, 'tasksDone')} / ${total(E, 'tasksTotal')}</td><td class="num">${total(E, 'projectsEnded')}</td><td class="num">${total(E, 'hours')} h</td><td class="num">$${money(total(E, 'salary'))}</td><td></td><td></td></tr></tfoot>
         </table></div>
       </div>
       <div class="stack">
@@ -359,7 +359,7 @@ async function renderAccTasks(_id, view) {
       openModal({
         title: e.name, sub: e.dept + ' · ' + t.period,
         body: `${xrow('Tasks completed', '', e.tasksDone + ' of ' + e.tasksTotal)}${xrow('Projects ended', '', e.projectsEnded)}
-          ${xrow('Hours worked', '', hrs(e.hours) + ' h')}${xrow('Salary to pay', '', '$' + money(e.salary))}${xrow('Status', '', badge(e.status))}`,
+          ${xrow('Hours worked', '', e.hours + ' h')}${xrow('Salary to pay', '', '$' + money(e.salary))}${xrow('Status', '', badge(e.status))}`,
         actions: [{ label: 'Close', ghost: true }]
       });
     });

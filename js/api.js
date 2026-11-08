@@ -6,11 +6,8 @@
    эндпоинты из README.md (контракты уже описаны в функциях ниже).
    ===================================================================== */
 const CONFIG = {
-  USE_MOCK: false,
-  // Normally the backend serves these pages itself (localhost:8080 or the deployed site) -> same origin.
-  // Opened from the IDEA preview (:63342), Live Server (:5500) or as a file -> call the local backend directly.
-  BASE_URL: (location.protocol === 'file:' || ['63342', '5500'].includes(location.port))
-    ? 'http://localhost:8080/api' : '/api'
+  USE_MOCK: true,
+  BASE_URL: '/api'
 };
 
 const LS = {
@@ -33,11 +30,7 @@ async function http(method, path, body) {
     method, headers, body: body ? JSON.stringify(body) : undefined
   });
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401 && !path.startsWith('/auth/')) {
-    localStorage.removeItem(LS.session); localStorage.removeItem(LS.token);
-    if (!location.pathname.endsWith('login.html')) location.href = 'login.html';
-  }
-  if (!res.ok) throw new Error(data.message || 'Server error (' + res.status + ')');
+  if (!res.ok) throw new Error(data.message || 'Ошибка сервера (' + res.status + ')');
   return data;
 }
 
@@ -519,18 +512,7 @@ const API = {
     return MOCK2.reports(role);
   },
   async generateReport(id, format, period) {
-    if (!CONFIG.USE_MOCK) {
-      const r = await http('POST', '/reports/' + id + '/generate', { format, period });
-      // бэк возвращает готовый CSV — сразу скачиваем файлом
-      if (r && r.content) {
-        const url = URL.createObjectURL(new Blob([r.content], { type: 'text/csv;charset=utf-8' }));
-        const a = document.createElement('a');
-        a.href = url; a.download = r.filename || (id + '.csv');
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
-      return r;
-    }
+    if (!CONFIG.USE_MOCK) return http('POST', '/reports/' + id + '/generate', { format, period });
     await sleep(500); return { ok: true };
   }
 };

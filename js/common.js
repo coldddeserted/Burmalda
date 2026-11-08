@@ -70,13 +70,7 @@ function openModal({ title, sub = '', body = '', actions = [] }) {
     const b = document.createElement('button');
     b.className = 'btn' + (a.ghost ? ' ghost' : '');
     b.textContent = a.label;
-    b.onclick = async () => {
-      if (!a.onClick) return close();
-      b.disabled = true;
-      try { if ((await a.onClick(ov)) !== false) close(); }
-      catch (e) { toast('Error: ' + e.message); }
-      finally { b.disabled = false; }
-    };
+    b.onclick = async () => { if (!a.onClick || (await a.onClick(ov)) !== false) close(); };
     box.appendChild(b);
   });
   ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(); });
@@ -103,12 +97,12 @@ function openSettings() {
 
 /* ---------- каркас страницы (сайдбар + шапка) ---------- */
 const navFor = (role) => [
-  { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-  { id: 'ai', label: 'AI Burmalda', icon: 'spark' },
-  { id: 'transaction', label: 'Transactions', icon: 'list' },
-  { id: 'wallet', label: role === 'accountant' ? 'Finance' : 'My wallet', icon: 'wallet' },
-  { id: 'tasks', label: 'Tasks', icon: 'task' },
-  { id: 'reports', label: 'Reports', icon: 'report' }
+  { id: 'dashboard', label: 'Dashboard', short: 'Home', icon: 'home' },
+  { id: 'ai', label: 'AI Burmalda', short: 'AI', icon: 'spark' },
+  { id: 'transaction', label: 'Transactions', short: 'Payments', icon: 'list' },
+  { id: 'wallet', label: role === 'accountant' ? 'Finance' : 'My wallet', short: role === 'accountant' ? 'Finance' : 'Wallet', icon: 'wallet' },
+  { id: 'tasks', label: 'Tasks', short: 'Tasks', icon: 'task' },
+  { id: 'reports', label: 'Reports', short: 'Reports', icon: 'report' }
 ];
 
 /* хуки очистки при уходе со страницы (таймеры и т.п.) */
@@ -217,19 +211,26 @@ function mountShell({ role, render }) {
         <button class="icon-btn" data-act="help" aria-label="Help">${icon('help')}</button>
         <div class="avatar" title="${esc(user.name)}">${esc(initials(user.name))}</div>
       </header>
+      <div class="m-head"><p>Hello, ${esc(String(user.name || '').split(/\s+/)[0])}</p><h1 id="mTitle"></h1></div>
       <main id="view"></main>
     </div>
-  </div>`;
+  </div>
+  <nav class="m-tabbar" id="mTabbar" aria-label="Main menu">
+    ${navFor(role).map((n) => `<button data-view="${n.id}" aria-label="${n.label}">${icon(n.icon)}<span>${n.short}</span></button>`).join('')}
+  </nav>`;
 
   const sidebar = $('#sidebar');
   const view = $('#view');
   const titles = { dashboard: 'Home' };
   navFor(role).forEach((n) => { if (!titles[n.id]) titles[n.id] = n.label; });
+  /* крупный заголовок для телефона (на ПК блок .m-head скрыт) */
+  const mTitles = { dashboard: 'Today’s Summary' };
 
   function go(id) {
     while (_leave.length) { try { _leave.pop()(); } catch (e) {} }
-    $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === id));
+    $$('#nav button, #mTabbar button').forEach((b) => b.classList.toggle('active', b.dataset.view === id));
     $('#pageTitle').textContent = titles[id];
+    $('#mTitle').textContent = mTitles[id] || titles[id];
     sidebar.classList.remove('open');
     view.innerHTML = '';
     view.dataset.page = id;
@@ -249,8 +250,10 @@ function mountShell({ role, render }) {
   document.addEventListener('click', (e) => {
     const a = e.target.closest('[data-act]');
     if (a && actions[a.dataset.act]) { $('#profileMenu').classList.remove('open'); actions[a.dataset.act](); return; }
-    const v = e.target.closest('#nav button');
+    const v = e.target.closest('#nav button, #mTabbar button');
     if (v) go(v.dataset.view);
+    /* выезжающее меню на телефоне: закрыть по тапу вне его */
+    if (sidebar.classList.contains('open') && !e.target.closest('#sidebar, #burger')) sidebar.classList.remove('open');
     if (!e.target.closest('#profileBtn')) $('#profileMenu').classList.remove('open');
   });
   $('#profileBtn').onclick = () => $('#profileMenu').classList.toggle('open');

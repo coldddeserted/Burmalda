@@ -97,6 +97,7 @@ async function renderDashboard(_id, view) {
       <div class="stat-big">${money(d.totalEarned.amount)}<small>${esc(d.totalEarned.currency)}</small></div>
       <div class="pill-btns"><button class="pill" id="withdrawBtn">Withdraw</button><button class="pill" id="historyBtn">History</button></div>
     </div>
+    <div class="m-rail">
     <div class="card">
       <div class="row-head"><h2>Ended Projects</h2><button class="arrow-btn" aria-label="Open">${icon('arrow')}</button></div>
       <div class="stat-big">${d.endedProjects.count}</div>
@@ -111,6 +112,7 @@ async function renderDashboard(_id, view) {
       <div class="row-head"><h2>Running Projects</h2><button class="arrow-btn" aria-label="Open">${icon('arrow')}</button></div>
       <div class="stat-big">${d.discussProjects.count}</div>
       <div class="stat-note">${esc(d.discussProjects.label)}</div>
+    </div>
     </div>
   </div>
 
@@ -159,7 +161,7 @@ async function renderDashboard(_id, view) {
   });
 
   /* ---- раскрываемые виджеты ---- */
-  const [cEarn, cEnd, cRun, cDisc] = $$('.g-top-emp > .card', view);
+  const [cEarn, cEnd, cRun, cDisc] = $$('.g-top-emp .card', view);
   const [cAn, cTeam] = $$('.g-main-emp > .stack:first-child > .card', view);
   const [cProg, cTrack] = $$('.sub-grid > .card', view);
   const goBtn = (id, label) => `<div class="xfoot"><button class="btn sm" data-go="${id}">${label}</button></div>`;
