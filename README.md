@@ -57,6 +57,8 @@ Demo accounts (password `demo1234`):
 
 The app starts with six months of demo data (dates relative to today).
 
+> **Screen sizes:** the UI is optimized for desktop at **1920×1080 with 100% browser zoom** and for **phones** (portrait). Other resolutions, tablets or zoom levels may show layout issues — for the best experience use a desktop browser at 100% zoom (Ctrl+0).
+
 **Optional keys** (environment variables in the run configuration) — without them PayPal payouts are simulated and the chat answers with rules:
 - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` — PayPal sandbox app with *Payouts* enabled ([developer.paypal.com](https://developer.paypal.com))
 - `ANTHROPIC_API_KEY` — Anthropic Claude key ([console.anthropic.com](https://console.anthropic.com)), or
