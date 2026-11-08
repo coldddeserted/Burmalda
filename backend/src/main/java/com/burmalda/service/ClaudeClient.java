@@ -79,7 +79,7 @@ public class ClaudeClient {
             ObjectNode body = mapper.createObjectNode();
             body.put("model", model);
             body.put("max_tokens", 1024);
-            body.put("temperature", 0.2);
+            // no "temperature": newer Claude models reject it ("deprecated for this model")
             body.put("system", system);
             ArrayNode toolDefs = body.putArray("tools");
             for (LlmClient.Tool tool : tools) {
