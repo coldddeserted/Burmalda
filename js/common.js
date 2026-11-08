@@ -70,7 +70,13 @@ function openModal({ title, sub = '', body = '', actions = [] }) {
     const b = document.createElement('button');
     b.className = 'btn' + (a.ghost ? ' ghost' : '');
     b.textContent = a.label;
-    b.onclick = async () => { if (!a.onClick || (await a.onClick(ov)) !== false) close(); };
+    b.onclick = async () => {
+      if (!a.onClick) return close();
+      b.disabled = true;
+      try { if ((await a.onClick(ov)) !== false) close(); }
+      catch (e) { toast('Error: ' + e.message); }
+      finally { b.disabled = false; }
+    };
     box.appendChild(b);
   });
   ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(); });
