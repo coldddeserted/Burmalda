@@ -109,9 +109,9 @@ async function renderDashboard(_id, view) {
       <div class="stat-note"><span class="chip">${d.runningProjects.delta}▲</span>Increased from last month</div>
     </div>
     <div class="card">
-      <div class="row-head"><h2>Running Projects</h2><button class="arrow-btn" aria-label="Open">${icon('arrow')}</button></div>
-      <div class="stat-big">${d.discussProjects.count}</div>
-      <div class="stat-note">${esc(d.discussProjects.label)}</div>
+      <div class="row-head"><h2>All Projects</h2><button class="arrow-btn" aria-label="Open">${icon('arrow')}</button></div>
+      <div class="stat-big">${d.endedProjects.count + d.runningProjects.count + d.discussProjects.count}</div>
+      <div class="stat-note"><span class="chip">${d.discussProjects.count}</span>${esc(d.discussProjects.label)}</div>
     </div>
     </div>
   </div>
@@ -188,9 +188,13 @@ async function renderDashboard(_id, view) {
         <div class="full"><div class="bar lg"><i style="width:${p.progress}%"></i></div></div></div>`).join('')}`
   }));
   makeExpandable(cDisc, () => ({
-    title: 'On Discuss',
-    html: `<div class="xstats">${xstat('Projects', d.discussProjects.count)}</div>
-      <div class="xsec">Waiting for a decision</div>
+    title: 'All Projects',
+    html: `<div class="xstats">${xstat('Ended', d.endedProjects.count)}${xstat('Running', d.runningProjects.count)}${xstat('On Discuss', d.discussProjects.count)}</div>
+      <div class="xsec">Running</div>
+      ${x.running.map((p) => xrow(esc(p.name), 'Due ' + esc(p.due), p.progress + '%')).join('')}
+      <div class="xsec">Ended</div>
+      ${x.ended.map((p) => xrow(esc(p.name), 'Finished ' + esc(p.date), badge('Completed'))).join('')}
+      <div class="xsec">On Discuss</div>
       ${x.discuss.map((p) => xrow(esc(p.name), esc(p.note), badge('Pending'))).join('')}`
   }));
   makeExpandable(cAn, () => {
