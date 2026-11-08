@@ -939,3 +939,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 
   .tabs button { border-radius: 999px; }
   .auth-box .btn { border-radius: 999px; }
 }
+
+/* AI-приветствие в светлой теме: цвета сайта вместо зелёного (на всех устройствах) */
+[data-theme="light"] .ai-hello .hi { color: #6f7f9e; }
+[data-theme="light"] .ai-hello h3 { color: var(--slate); }
