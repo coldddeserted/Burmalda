@@ -50,6 +50,9 @@ app:
     # comma-separated models to try if the main one is overloaded (503) or rate-limited (429)
     fallback-models: ${AI_FALLBACK_MODELS:}
     base-url: https://generativelanguage.googleapis.com
+    # Claude instead of Gemini: set ANTHROPIC_API_KEY (console.anthropic.com). It wins over AI_API_KEY.
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    claude-model: ${CLAUDE_MODEL:claude-haiku-5-5}
 
   # Folder with the frontend (login.html, js/, css/). Empty = auto: ".." (repo root when run from backend/) or ".".
   frontend-dir: ${FRONTEND_DIR:}

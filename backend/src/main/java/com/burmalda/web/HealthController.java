@@ -28,6 +28,6 @@ public class HealthController {
                 "status", "ok",
                 "time", Instant.now().toString(),
                 "paypal", paypal.enabled() ? "sandbox" : "simulated",
-                "ai", llm.enabled() ? "gemini:" + llm.model() : "rules");
+                "ai", llm.describe());
     }
 }

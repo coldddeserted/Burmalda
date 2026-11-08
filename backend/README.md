@@ -29,6 +29,8 @@ All optional — without them the app runs in demo mode.
 |---|---|---|
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | real payouts in **PayPal Sandbox** (developer.paypal.com → Apps & Credentials → Sandbox; enable *Payouts* for the app) | simulated payouts, batch ids start with `SIM-` |
 | `AI_API_KEY` | AI agent on **Google Gemini** (free key: aistudio.google.com → Get API key) | rule-based answers on the same real data |
+| `ANTHROPIC_API_KEY` | AI agent on **Anthropic Claude** (console.anthropic.com → API keys); wins over `AI_API_KEY` | Gemini, if `AI_API_KEY` is set |
+| `CLAUDE_MODEL` | Claude model id | `claude-haiku-5-5` |
 | `AI_MODEL` | Gemini model id | `gemini-3.8-flash` |
 | `AI_FALLBACK_MODELS` | comma-separated models to try when the main one is overloaded (503) or rate-limited (429); each model is retried 3 times first | none |
 | `JWT_SECRET` | token signing secret, 32+ characters | dev secret — **set your own in production** |

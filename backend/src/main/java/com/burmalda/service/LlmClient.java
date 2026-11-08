@@ -25,7 +25,7 @@ import java.util.Optional;
 
 /**
  * Google Gemini API with function calling (tools). Enabled by the AI_API_KEY env variable
- * (free key: aistudio.google.com -> Get API key).
+ * (free key: aistudio.google.com -> Get API key). If ANTHROPIC_API_KEY is set, Claude is used instead (ClaudeClient).
  *
  * Agent loop:
  *   1. send the conversation + tool descriptions to the model
@@ -48,12 +48,15 @@ public class LlmClient {
     private volatile List<String> discovered;
     private final RestClient http;
     private final ObjectMapper mapper;
+    /** If ANTHROPIC_API_KEY is set, the agent runs on Claude instead of Gemini. */
+    private final ClaudeClient claude;
 
     public LlmClient(@Value("${app.ai.api-key:}") String apiKey,
                      @Value("${app.ai.model:gemini-3.8-flash}") String model,
                      @Value("${app.ai.fallback-models:}") List<String> fallbackModels,
                      @Value("${app.ai.base-url:https://generativelanguage.googleapis.com}") String baseUrl,
-                     ObjectMapper mapper) {
+                     ObjectMapper mapper, ClaudeClient claude) {
+        this.claude = claude;
         this.apiKey = apiKey;
         this.model = model;
         this.activeModel = model;
@@ -88,16 +91,23 @@ public class LlmClient {
     }
 
     public boolean enabled() {
-        return !apiKey.isBlank();
+        return claude.enabled() || !apiKey.isBlank();
+    }
+
+    /** For /api/health: which AI answers, e.g. "claude:claude-haiku-5-5" or "gemini:gemini-3.8-flash". */
+    public String describe() {
+        if (claude.enabled()) return "claude:" + claude.model();
+        return apiKey.isBlank() ? "rules" : "gemini:" + activeModel;
     }
 
     public String model() {
-        return activeModel;
+        return claude.enabled() ? claude.model() : activeModel;
     }
 
     public Optional<AgentResult> runAgent(String system, List<Turn> history, String userMessage,
                                           List<Tool> tools, ToolRunner runner, int maxSteps) {
-        if (!enabled()) return Optional.empty();
+        if (claude.enabled()) return claude.runAgent(system, history, userMessage, tools, runner, maxSteps);
+        if (apiKey.isBlank()) return Optional.empty();
         try {
             ArrayNode contents = mapper.createArrayNode();
             for (Turn t : history) contents.add(textContent(t.role(), t.text()));

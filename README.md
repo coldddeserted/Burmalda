@@ -20,7 +20,7 @@ In small companies the accountant spends the end of every month collecting hours
 - **Payout status** — `GET /v1/payments/payouts/{batch_id}`: SUCCESS / PENDING / UNCLAIMED per employee.
 - OAuth2 client credentials with token caching.
 
-**AI — Google Gemini with function calling**
+**AI — an agent with function calling on Anthropic Claude or Google Gemini**
 The chat is a real agent: the model decides which tools to call, the backend runs them on live data and PayPal.
 - Accountant tools: company overview, payroll calculation, pending approvals, recent PayPal transactions, risk alerts, cash flow, department budgets, **propose payroll payment**, **execute payroll payment**, **check payout status**.
 - Employee tools: my pay, my hours, my payouts, my tasks, my payout status — only their own data.
@@ -58,7 +58,8 @@ The app starts with six months of demo data (dates relative to today).
 
 **Optional keys** (environment variables in the run configuration) — without them PayPal payouts are simulated and the chat answers with rules:
 - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` — PayPal sandbox app with *Payouts* enabled ([developer.paypal.com](https://developer.paypal.com))
-- `AI_API_KEY` — Google Gemini key ([aistudio.google.com](https://aistudio.google.com))
+- `ANTHROPIC_API_KEY` — Anthropic Claude key ([console.anthropic.com](https://console.anthropic.com)), or
+- `AI_API_KEY` — Google Gemini key ([aistudio.google.com](https://aistudio.google.com)); if both are set, Claude is used
 
 Details: [backend/README.md](backend/README.md). Check http://localhost:8080/api/health — it shows whether PayPal and AI are live.
 
@@ -75,7 +76,7 @@ The repository has a [`render.yaml`](render.yaml) blueprint: Render dashboard �
 - **Backend:** Java 21, Spring Boot 3.5, Spring Security + JWT, Spring Data JPA, H2 / PostgreSQL, Maven
 - **Frontend:** plain HTML, CSS and JavaScript, no build step
 - **PayPal:** Payouts API (sandbox)
-- **AI:** Google Gemini API with function calling
+- **AI:** Anthropic Claude (Messages API, tool use) or Google Gemini (function calling)
 
 ## Repository structure
 ```
