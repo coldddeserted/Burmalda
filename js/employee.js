@@ -101,7 +101,6 @@ async function renderDashboard(_id, view) {
     <div class="card">
       <div class="row-head"><h2>Ended Projects</h2><button class="arrow-btn" aria-label="Open">${icon('arrow')}</button></div>
       <div class="stat-big">${d.endedProjects.count}</div>
-      <div class="stat-note"><span class="chip">${d.endedProjects.delta}▲</span>Increased from last month</div>
     </div>
     <div class="card">
       <div class="row-head"><h2>Running Projects</h2><button class="arrow-btn" aria-label="Open">${icon('arrow')}</button></div>
